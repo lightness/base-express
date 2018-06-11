@@ -1,11 +1,12 @@
-var express = require('express')
-  , router = express.Router()
+let express = require('express');
+let router = express.Router();
 
-router.use('/message', require('./message'))
-router.use('/users', require('./users'))
+router.use('/friendship', require('./friendship'));
+router.use('/message', require('./message'));
+router.use('/user', require('./user'));
 
 router.get('/', function(req, res) {
-  res.render('index')
-})
+    res.render('index');
+});
 
-module.exports = router
+module.exports = router;

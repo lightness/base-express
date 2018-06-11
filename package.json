@@ -19,6 +19,7 @@
   "dependencies": {
     "bcrypt": "^2.0.1",
     "body-parser": "^1.12.3",
+    "error-factory": "^0.1.6",
     "express": "^4.12.3",
     "express-jwt": "^5.3.1",
     "jade": "^1.9.2",
