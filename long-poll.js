@@ -3,13 +3,11 @@ const _ = require('lodash');
 const db = require('./models');
 const NotAuthorizedError = require('./errors/not-authorized-error');
 
-let longpoll;
-
 module.exports = {
     setup: function(app) {
-        longpoll = require('express-longpoll')(app, { DEBUG: true });
+        this.longpoll = require('express-longpoll')(app);
 
-        longpoll.create('/poll/:id', function(req, res, next) {
+        this.longpoll.create('/poll/:id', function(req, res, next) {
             let userId = +req.params.id;
             let currentUserId = req.user.userId;
 
@@ -31,14 +29,11 @@ module.exports = {
                     return next();
                 }
 
-                let firstId = _.first(foundMessageInstances).get('id');
-                let lastId = _.last(foundMessageInstances).get('id');
-
                 res.json(foundMessageInstances);
             });
         });
     },
     publish: function(userId, message) {
-        longpoll.publishToId('/poll/:id', userId, [message.toJSON()]);
+        this.longpoll.publishToId('/poll/:id', userId, [message.toJSON()]);
     },
 };
