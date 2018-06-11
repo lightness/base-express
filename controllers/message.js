@@ -1,13 +1,10 @@
 let express = require('express');
-let jwt = require('express-jwt');
 
-let jwtHelper = require('../helpers/jwt');
 let db = require('../models');
 
 const router = express.Router();
-const jwtMiddleware = jwt({ secret: jwtHelper.secret });
 
-router.post('/send', jwtMiddleware, function(req, res) {
+router.post('/send', function(req, res) {
     let fromUserId = req.user.userId;
     let toUserId = req.body.toUserId;
 

@@ -1,9 +1,8 @@
 let express = require('express');
-let jwt = require('express-jwt');
 
 let db = require('../models');
-let jwtHelper = require('../helpers/jwt');
 let errorHandler = require('../errors/default-handler');
+let UserNotFoundError = require('../errors/user/user-not-found-error');
 let FriendshipNotFoundError = require('../errors/friendship/friendship-not-found-error');
 let FriendshipAlreadyExistsError = require('../errors/friendship/friendship-already-exists-error');
 let FriendshipAlreadyAcceptedError = require('../errors/friendship/friendship-already-accepted-error');
@@ -11,9 +10,8 @@ let FriendshipAlreadyRejectedError = require('../errors/friendship/friendship-al
 
 const Op = db.Sequelize.Op;
 const router = express.Router();
-const jwtMiddleware = jwt({ secret: jwtHelper.secret });
 
-router.get('/requests', jwtMiddleware, function(req, res) {
+router.get('/requests', function(req, res) {
     let currentUserId = req.user.userId;
 
     db.Friendship.findAll({
@@ -34,7 +32,7 @@ router.get('/requests', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.get('/friends', jwtMiddleware, function(req, res) {
+router.get('/friends', function(req, res) {
     let currentUserId = req.user.userId;
 
     db.Friendship.findAll({
@@ -70,7 +68,7 @@ router.get('/friends', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.post('/request', jwtMiddleware, function(req, res) {
+router.post('/request', function(req, res) {
     let fromUserId = req.user.userId;
     let toUserId = req.body.toUserId;
 
@@ -78,14 +76,21 @@ router.post('/request', jwtMiddleware, function(req, res) {
         res.send(400, 'You can not be a friend to yourself');
     }
 
-    Promise.all([
-        db.Friendship.findOne({
-            where: { fromUserId: fromUserId, toUserId: toUserId },
-        }),
-        db.Friendship.findOne({
-            where: { fromUserId: toUserId, toUserId: fromUserId },
-        }),
-    ])
+    db.User.findById(toUserId)
+        .then(function(foundUser) {
+            if (!foundUser) {
+                throw new UserNotFoundError();
+            }
+
+            return Promise.all([
+                db.Friendship.findOne({
+                    where: { fromUserId: fromUserId, toUserId: toUserId },
+                }),
+                db.Friendship.findOne({
+                    where: { fromUserId: toUserId, toUserId: fromUserId },
+                }),
+            ]);
+        })
         .then(function(instances) {
             if (instances[0] || instances[1]) {
                 throw new FriendshipAlreadyExistsError();
@@ -103,7 +108,7 @@ router.post('/request', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.put('/:friendshipId/accept', jwtMiddleware, function(req, res) {
+router.put('/:friendshipId/accept', function(req, res) {
     let friendshipId = req.params.friendshipId;
     let currentUserId = req.user.userId;
 
@@ -132,7 +137,7 @@ router.put('/:friendshipId/accept', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.put('/:friendshipId/reject', jwtMiddleware, function(req, res) {
+router.put('/:friendshipId/reject', function(req, res) {
     let friendshipId = req.params.friendshipId;
 
     db.Friendship.findById(friendshipId)
@@ -160,7 +165,7 @@ router.put('/:friendshipId/reject', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.delete('/:friendshipId', jwtMiddleware, function(req, res) {
+router.delete('/:friendshipId', function(req, res) {
     let friendshipId = req.params.friendshipId;
     let currentUserId = req.user.userId;
 

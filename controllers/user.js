@@ -1,7 +1,6 @@
 let _ = require('lodash');
 let bcrypt = require('bcrypt');
 let express = require('express');
-let jwt = require('express-jwt');
 
 let db = require('../models');
 let jwtHelper = require('../helpers/jwt');
@@ -12,9 +11,8 @@ let UserAlreadyExistsError = require('../errors/user/user-already-exists-error')
 
 const Op = db.Sequelize.Op;
 const router = express.Router();
-const jwtMiddleware = jwt({ secret: jwtHelper.secret });
 
-router.get('/me', jwtMiddleware, function(req, res) {
+router.get('/me', function(req, res) {
     let currentUserId = req.user.userId;
 
     db.User.findById(currentUserId)
@@ -28,7 +26,7 @@ router.get('/me', jwtMiddleware, function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.get('/:id', jwtMiddleware, function(req, res) {
+router.get('/:id', function(req, res) {
     let targetUserId = req.params.id;
 
     db.User.findById(targetUserId)
@@ -103,7 +101,7 @@ router.post('/register', function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.get('/', jwtMiddleware, function(req, res) {
+router.get('/', function(req, res) {
     let q = req.query.q;
     let currentUserId = req.user.userId;
 
