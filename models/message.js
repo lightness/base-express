@@ -4,6 +4,7 @@ module.exports = (sequelize, DataTypes) => {
         text: { type: DataTypes.STRING, allowNull: false },
         fromUserId: { type: DataTypes.INTEGER, allowNull: false },
         toUserId: { type: DataTypes.INTEGER, allowNull: false },
+        isRead: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
     });
 
     Message.associate = function(models) {

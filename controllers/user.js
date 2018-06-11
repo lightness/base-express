@@ -47,7 +47,7 @@ router.post('/login', function(req, res) {
     let email = req.body.email;
     let password = req.body.password;
 
-    db.User.findOne({
+    db.User.scope('withPassword').findOne({
         where: {
             email: email, // TODO: Make criteria case insensitive
         },

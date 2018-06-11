@@ -3,6 +3,7 @@ let bodyParser = require('body-parser');
 let jwt = require('express-jwt');
 
 let db = require('./models');
+let longPoll = require('./long-poll');
 let jwtHelper = require('./helpers/jwt');
 
 let app = express();
@@ -14,7 +15,9 @@ app.set('view engine', 'jade');
 
 app.use(express.static(__dirname + '/public'));
 app.use(
-    jwt({ secret: jwtHelper.secret }).unless({ path: ['/user/login', '/user/register'] }),
+    jwt({ secret: jwtHelper.secret }).unless({
+        path: ['/user/login', '/user/register'],
+    }),
 );
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -25,4 +28,6 @@ db.sequelize.sync().then(() => {
     app.listen(port, function() {
         console.log('Listening on port ' + port);
     });
+
+    longPoll.setup(app);
 });
