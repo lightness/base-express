@@ -1,7 +1,7 @@
 var express = require('express')
   , router = express.Router()
 
-router.use('/comments', require('./comments'))
+router.use('/message', require('./message'))
 router.use('/users', require('./users'))
 
 router.get('/', function(req, res) {

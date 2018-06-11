@@ -17,9 +17,16 @@
   "author": "Terlici Ltd.",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^2.0.1",
     "body-parser": "^1.12.3",
     "express": "^4.12.3",
-    "jade": "^1.9.2"
+    "express-jwt": "^5.3.1",
+    "jade": "^1.9.2",
+    "jsonwebtoken": "^8.2.2",
+    "lodash": "^4.17.10",
+    "pg": "^7.4.3",
+    "sequelize": "^4.37.10",
+    "sequelize-cli": "^4.0.0"
   },
   "devDependencies": {
     "mocha": "^2.2.4",
