@@ -13,7 +13,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(require('./controllers'));
 
-db.sequelize.sync({ force: true }).then(() => {
+// { force: true }
+db.sequelize.sync().then(() => {
     app.listen(port, function() {
         console.log('Listening on port ' + port);
     });

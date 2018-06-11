@@ -1,20 +1,55 @@
 let _ = require('lodash');
 let bcrypt = require('bcrypt');
 let express = require('express');
+let jwt = require('express-jwt');
 
-let models = require('../models');
+let db = require('../models');
 let jwtHelper = require('../helpers/jwt');
 let errorHandler = require('../errors/default-handler');
+let UserNotForundError = require('../errors/user/user-not-found-error');
 let BadCredentialsError = require('../errors/user/bad-credentials-error');
 let UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
 
-let router = express.Router();
+const Op = db.Sequelize.Op;
+const router = express.Router();
+const jwtMiddleware = jwt({ secret: jwtHelper.secret });
+
+router.get('/me', jwtMiddleware, function(req, res) {
+    let currentUserId = req.user.userId;
+
+    db.User.findById(currentUserId)
+        .then(function(foundUser) {
+            if (!foundUser) {
+                throw new UserNotForundError();
+            }
+
+            res.json(foundUser);
+        })
+        .catch(errorHandler(res));
+});
+
+router.get('/:id', jwtMiddleware, function(req, res) {
+    let targetUserId = req.params.id;
+
+    db.User.findById(targetUserId)
+        .then(function(foundUser) {
+            if (!foundUser) {
+                throw new UserNotForundError();
+            }
+
+            // In future there should be privacy policy checks
+            // For example, be visible only for friends, or for friends of friends
+
+            res.json(foundUser);
+        })
+        .catch(errorHandler(res));
+});
 
 router.post('/login', function(req, res) {
     let email = req.body.email;
     let password = req.body.password;
 
-    models.User.findOne({
+    db.User.findOne({
         where: {
             email: email, // TODO: Make criteria case insensitive
         },
@@ -45,7 +80,7 @@ router.post('/register', function(req, res) {
     let password = req.body.password;
     let email = req.body.email;
 
-    models.User.findOne({
+    db.User.findOne({
         where: { email: email },
     })
         .then(function(foundUser) {
@@ -56,17 +91,37 @@ router.post('/register', function(req, res) {
             return bcrypt.hash(password, 10);
         })
         .then(function(hash) {
-            return models.User.create({
+            return db.User.create({
                 email: email,
                 password: hash,
                 fullName: req.body.fullName,
             });
         })
-        .then(function(createdUserInstance) {
-            let createdUser = createdUserInstance.toJSON();
-            let response = _.omit(createdUser, 'password');
+        .then(function(createdUser) {
+            res.json(createdUser);
+        })
+        .catch(errorHandler(res));
+});
 
-            res.json(response);
+router.get('/', jwtMiddleware, function(req, res) {
+    let q = req.query.q;
+    let currentUserId = req.user.userId;
+
+    db.User.findAll({
+        where: {
+            [Op.or]: [
+                {
+                    fullName: { [Op.like]: '%' + q + '%' },
+                },
+                {
+                    email: { [Op.like]: '%' + q + '%' },
+                },
+            ],
+            id: { [Op.ne]: currentUserId },
+        },
+    })
+        .then(function(foundUsers) {
+            res.json(foundUsers);
         })
         .catch(errorHandler(res));
 });
