@@ -4,21 +4,7 @@ const request = require('supertest');
 const app = require('../../app');
 const db = require('../../models');
 const jwtHelper = require('../../helpers/jwt');
-
-const ContentType = Object.freeze({
-    HTML: /text\/html/,
-    JSON: /application\/json/,
-});
-
-const Accept = Object.freeze({
-    JSON: 'application/json',
-});
-
-const Header = Object.freeze({
-    ACCEPT: 'Accept',
-    AUTHORIZATION: 'Authorization',
-    CONTENT_TYPE: 'Content-Type',
-});
+const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('User controller', function() {
     let now;
