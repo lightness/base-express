@@ -19,5 +19,12 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(require('./controllers'));
+app.use(function(err, req, res, next) {
+    if (err.status && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+    } else {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 module.exports = app;
