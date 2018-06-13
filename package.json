@@ -32,6 +32,7 @@
     "sequelize-cli": "^4.0.0"
   },
   "devDependencies": {
+    "dreamjs": "^0.1.8",
     "jasmine": "^3.1.0",
     "jasmine-console-reporter": "^3.0.2",
     "jasmine-node": "^1.14.5",

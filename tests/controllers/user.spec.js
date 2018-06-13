@@ -4,6 +4,7 @@ const request = require('supertest');
 const app = require('../../app');
 const db = require('../../models');
 const jwtHelper = require('../../helpers/jwt');
+const mockFactory = require('../helpers/mock-factory');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('User controller', function() {
@@ -57,11 +58,7 @@ describe('User controller', function() {
 
         it('should respond with 404, if authorization token contains wrong user id', function(done) {
             const EXPECTED_ERROR_MESSAGE = 'User not found';
-            const userToCreate = {
-                email: 'test@test.com',
-                fullName: 'Test User',
-                password: 'Some password',
-            };
+            const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
             db.User.create(userToCreate).then(function(createdUser) {
                 const authHeader = jwtHelper.createAuthHeader(
@@ -82,11 +79,7 @@ describe('User controller', function() {
         });
 
         it('should respond with 200, if authorization token is correct', function(done) {
-            const userToCreate = {
-                email: 'test@test.com',
-                fullName: 'Test User',
-                password: 'Some password',
-            };
+            const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
             db.User.create(userToCreate).then(function(createdUser) {
                 const authHeader = jwtHelper.createAuthHeader(createdUser.id);
@@ -124,6 +117,24 @@ describe('User controller', function() {
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
+        });
+
+        it('should respond with 404, if no user with such id', function(done) {
+            const URL = '/user/5';
+            const EXPECTED_ERROR_MESSAGE = 'User not found';
+
+            const authHeader = jwtHelper.createAuthHeader(1);
+
+            request(app)
+                .get(URL)
+                .set(Header.ACCEPT, Accept.JSON)
+                .set(Header.AUTHORIZATION, authHeader)
+                .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                .expect(function(res) {
+                    expect(res.body).toBeDefined();
+                    expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                })
+                .expect(404, done);
         });
     });
 });
