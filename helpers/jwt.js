@@ -6,6 +6,6 @@ module.exports = {
         return jsonwebtoken.sign({ userId: userId }, this.secret);
     },
     createAuthHeader: function(userId) {
-        return 'Bearer '+ this.createJwt(userId);
-    }
+        return 'Bearer ' + this.createJwt(userId);
+    },
 };

@@ -8,7 +8,7 @@ console.log(">>> ENV", process.env.NODE_ENV);
 
 // db.sequelize.sync({ force: true }).then(() => {
 db.sequelize.sync({ force: true }).then(() => {
-    app.listen(port, function() {
+    app.listen(port, () => {
         console.log('Listening on port ' + port);
     });
 

@@ -8,10 +8,10 @@ const mockFactory = require('../helpers/mock-factory');
 const { AuthHeaderRegexp } = require('../helpers/regexps');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
-describe('User controller', function() {
+describe('User controller', () => {
     let now;
 
-    beforeEach(function(done) {
+    beforeEach((done) => {
         now = new Date();
 
         jasmine.clock().install();
@@ -20,28 +20,28 @@ describe('User controller', function() {
         db.sequelize.sync({ force: true }).then(done);
     });
 
-    afterEach(function() {
+    afterEach(() => {
         jasmine.clock().uninstall();
     });
 
-    describe('GET /user/me', function() {
+    describe('GET /user/me', () => {
         const URL = '/user/me';
 
-        it('should respond with 401, if authorization token is not set', function(done) {
+        it('should respond with 401, if authorization token is not set', (done) => {
             const EXPECTED_ERROR_MESSAGE = 'No authorization token was found';
 
             request(app)
                 .get(URL)
                 .set(Header.ACCEPT, Accept.JSON)
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                .expect(function(res) {
+                .expect((res) => {
                     expect(res.body).toBeDefined();
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
         });
 
-        it('should respond with 401, if authorization token is malformed', function(done) {
+        it('should respond with 401, if authorization token is malformed', (done) => {
             const MALFORMED_HEADER = 'Bearer XXX';
             const EXPECTED_ERROR_MESSAGE = 'jwt malformed';
 
@@ -50,18 +50,18 @@ describe('User controller', function() {
                 .set(Header.ACCEPT, Accept.JSON)
                 .set(Header.AUTHORIZATION, MALFORMED_HEADER)
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                .expect(function(res) {
+                .expect((res) => {
                     expect(res.body).toBeDefined();
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
         });
 
-        it('should respond with 404, if authorization token contains wrong user id', function(done) {
+        it('should respond with 404, if authorization token contains wrong user id', (done) => {
             const EXPECTED_ERROR_MESSAGE = 'User not found';
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(function(createdUser) {
+            db.User.create(userToCreate).then((createdUser) => {
                 const authHeader = jwtHelper.createAuthHeader(
                     createdUser.id + 1,
                 );
@@ -71,7 +71,7 @@ describe('User controller', function() {
                     .set(Header.ACCEPT, Accept.JSON)
                     .set(Header.AUTHORIZATION, authHeader)
                     .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(function(res) {
+                    .expect((res) => {
                         expect(res.body).toBeDefined();
                         expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                     })
@@ -79,10 +79,10 @@ describe('User controller', function() {
             });
         });
 
-        it('should respond with 200, if authorization token is correct', function(done) {
+        it('should respond with 200, if authorization token is correct', (done) => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(function(createdUser) {
+            db.User.create(userToCreate).then((createdUser) => {
                 const authHeader = jwtHelper.createAuthHeader(createdUser.id);
 
                 request(app)
@@ -90,7 +90,7 @@ describe('User controller', function() {
                     .set(Header.ACCEPT, Accept.JSON)
                     .set(Header.AUTHORIZATION, authHeader)
                     .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(function(res) {
+                    .expect((res) => {
                         expect(res.body).toBeDefined();
                         expect(res.body.id).toBe(createdUser.id);
                         expect(res.body.email).toBe(createdUser.email);
@@ -104,8 +104,8 @@ describe('User controller', function() {
         });
     });
 
-    describe('GET /user/:id', function() {
-        it('should respond with 401, if authorization token is not set', function(done) {
+    describe('GET /user/:id', () => {
+        it('should respond with 401, if authorization token is not set', (done) => {
             const URL = '/user/1';
             const EXPECTED_ERROR_MESSAGE = 'No authorization token was found';
 
@@ -113,14 +113,14 @@ describe('User controller', function() {
                 .get(URL)
                 .set(Header.ACCEPT, Accept.JSON)
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                .expect(function(res) {
+                .expect((res) => {
                     expect(res.body).toBeDefined();
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
         });
 
-        it('should respond with 404, if no user with such id', function(done) {
+        it('should respond with 404, if no user with such id', (done) => {
             const URL = '/user/5';
             const EXPECTED_ERROR_MESSAGE = 'User not found';
 
@@ -131,17 +131,17 @@ describe('User controller', function() {
                 .set(Header.ACCEPT, Accept.JSON)
                 .set(Header.AUTHORIZATION, authHeader)
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                .expect(function(res) {
+                .expect((res) => {
                     expect(res.body).toBeDefined();
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(404, done);
         });
 
-        it('should respond with 200, if user found', function(done) {
+        it('should respond with 200, if user found', (done) => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(function(createdUser) {
+            db.User.create(userToCreate).then((createdUser) => {
                 const URL = '/user/' + createdUser.id;
 
                 const authHeader = jwtHelper.createAuthHeader(1);
@@ -151,7 +151,7 @@ describe('User controller', function() {
                     .set(Header.ACCEPT, Accept.JSON)
                     .set(Header.AUTHORIZATION, authHeader)
                     .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(function(res) {
+                    .expect((res) => {
                         expect(res.body).toBeDefined();
                         expect(res.body.id).toBe(createdUser.id);
                         expect(res.body.email).toBe(createdUser.email);
@@ -165,13 +165,13 @@ describe('User controller', function() {
         });
     });
 
-    describe('GET /user/login', function() {
+    describe('GET /user/login', () => {
         const URL = '/user/login';
 
-        it('should respond with 200 and contain authorization header, if login was successful', function(done) {
+        it('should respond with 200 and contain authorization header, if login was successful', (done) => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(function(createdUser) {
+            db.User.create(userToCreate).then((createdUser) => {
                 const email = createdUser.email;
                 const password = 'any password';
 
@@ -209,10 +209,10 @@ describe('User controller', function() {
                 .expect(401, done);
         });
 
-        it('should respond with 401, if wrong password was passed', function(done) {
+        it('should respond with 401, if wrong password was passed', (done) => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(function(createdUser) {
+            db.User.create(userToCreate).then((createdUser) => {
                 const email = createdUser.email;
                 const password = 'any password';
 

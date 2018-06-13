@@ -9,21 +9,25 @@ const WrongMessageTargetError = require('../errors/mesasge/wrong-message-target-
 const Op = db.Sequelize.Op;
 const router = express.Router();
 
-router.post('/send', function(req, res) {
+router.post('/send', (req, res) => {
     const fromUserId = req.user.userId;
     const toUserId = req.body.toUserId;
 
     Promise.resolve()
-        .then(function() {
+        .then(() => {
             if (fromUserId === toUserId) {
-                throw new WrongMessageTargetError('You can not send a message to yourself');
+                throw new WrongMessageTargetError(
+                    'You can not send a message to yourself',
+                );
             }
 
             return db.User.findById(toUserId);
         })
-        .then(function(foundToUser) {
+        .then(foundToUser => {
             if (!foundToUser) {
-                throw new WrongMessageTargetError('Wrong target user id specified');
+                throw new WrongMessageTargetError(
+                    'Wrong target user id specified',
+                );
             }
 
             return db.Message.create({
@@ -32,7 +36,7 @@ router.post('/send', function(req, res) {
                 text: req.body.text,
             });
         })
-        .then(function(createdMessage) {
+        .then(createdMessage => {
             longPoll.publish(createdMessage.toUserId, createdMessage);
 
             res.json(createdMessage);
@@ -40,13 +44,13 @@ router.post('/send', function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.put('/markAsRead', function(req, res) {
+router.put('/markAsRead', (req, res) => {
     const currentUserId = req.user.userId;
     const fromId = req.body.fromId;
     const toId = req.body.toId;
 
     Promise.resolve()
-        .then(function() {
+        .then(() => {
             if (!fromId || !toId) {
                 throw new MessageRangeError(
                     'Fields "fromId" and "toId" should be specified',
@@ -71,7 +75,7 @@ router.put('/markAsRead', function(req, res) {
                 },
             );
         })
-        .then(function() {
+        .then(() => {
             res.json({});
         })
         .catch(errorHandler(res));

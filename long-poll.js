@@ -4,10 +4,10 @@ const db = require('./models');
 const NotAuthorizedError = require('./errors/not-authorized-error');
 
 module.exports = {
-    setup: function(app) {
+    setup: app => {
         this.longpoll = require('express-longpoll')(app);
 
-        this.longpoll.create('/poll/:id', function(req, res, next) {
+        this.longpoll.create('/poll/:id', (req, res, next) => {
             const userId = +req.params.id;
             const currentUserId = req.user.userId;
 
@@ -24,7 +24,7 @@ module.exports = {
                 },
                 order: [['id', 'ASC']],
                 limit: 100,
-            }).then(function(foundMessageInstances) {
+            }).then(foundMessageInstances => {
                 if (_.isEmpty(foundMessageInstances)) {
                     return next();
                 }
@@ -33,7 +33,7 @@ module.exports = {
             });
         });
     },
-    publish: function(userId, message) {
+    publish: (userId, message) => {
         this.longpoll.publishToId('/poll/:id', userId, [message.toJSON()]);
     },
 };

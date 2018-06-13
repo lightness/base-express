@@ -1,7 +1,7 @@
 const AppError = require('./app-error');
 
-module.exports = function(res) {
-    return function(err) {
+module.exports = res => {
+    return err => {
         if (err instanceof AppError) {
             res.status(err.status || 500).json({ message: err.message });
         } else {

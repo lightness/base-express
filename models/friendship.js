@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
         ]
     });
 
-    Friendship.associate = function(models) {
+    Friendship.associate = (models) => {
         models.Friendship.belongsTo(models.User, {
             as: 'fromUser',
             foreignKey: 'fromUserId',

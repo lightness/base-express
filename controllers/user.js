@@ -12,11 +12,11 @@ const UserAlreadyExistsError = require('../errors/user/user-already-exists-error
 const Op = db.Sequelize.Op;
 const router = express.Router();
 
-router.get('/me', function(req, res) {
+router.get('/me', (req, res) => {
     const currentUserId = req.user.userId;
 
     db.User.findById(currentUserId)
-        .then(function(foundUser) {
+        .then(foundUser => {
             if (!foundUser) {
                 throw new UserNotForundError();
             }
@@ -26,11 +26,11 @@ router.get('/me', function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.get('/:id', function(req, res) {
+router.get('/:id', (req, res) => {
     const targetUserId = req.params.id;
 
     db.User.findById(targetUserId)
-        .then(function(foundUser) {
+        .then(foundUser => {
             if (!foundUser) {
                 throw new UserNotForundError();
             }
@@ -43,7 +43,7 @@ router.get('/:id', function(req, res) {
         .catch(errorHandler(res));
 });
 
-router.post('/login', function(req, res) {
+router.post('/login', (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
 
@@ -53,53 +53,56 @@ router.post('/login', function(req, res) {
                 email: email,
             },
         })
-        .then(function(foundUser) {
+        .then(foundUser => {
             if (!foundUser) {
                 throw new BadCredentialsError(`Bad credentials`);
             }
 
             return bcrypt
                 .compare(password, foundUser.password)
-                .then(function(isPasswordCorrect) {
+                .then(isPasswordCorrect => {
                     if (!isPasswordCorrect) {
                         throw new BadCredentialsError(`Bad credentials`);
                     }
 
-                    res.setHeader('authorization', jwtHelper.createAuthHeader(foundUser.id));
+                    res.setHeader(
+                        'authorization',
+                        jwtHelper.createAuthHeader(foundUser.id),
+                    );
                     res.status(200).end();
                 });
         })
         .catch(errorHandler(res));
 });
 
-router.post('/register', function(req, res) {
+router.post('/register', (req, res) => {
     const password = req.body.password;
     const email = req.body.email;
 
     db.User.findOne({
         where: { email: email },
     })
-        .then(function(foundUser) {
+        .then(foundUser => {
             if (foundUser) {
                 throw new UserAlreadyExistsError();
             }
 
             return bcrypt.hash(password, 10);
         })
-        .then(function(hash) {
+        .then(hash => {
             return db.User.create({
                 email: email,
                 password: hash,
                 fullName: req.body.fullName,
             });
         })
-        .then(function(createdUser) {
+        .then(createdUser => {
             res.json(createdUser);
         })
         .catch(errorHandler(res));
 });
 
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
     const q = req.query.q;
     const currentUserId = req.user.userId;
 
@@ -116,7 +119,7 @@ router.get('/', function(req, res) {
             id: { [Op.ne]: currentUserId },
         },
     })
-        .then(function(foundUsers) {
+        .then(foundUsers => {
             res.json(foundUsers);
         })
         .catch(errorHandler(res));

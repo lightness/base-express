@@ -2,12 +2,12 @@ should = require('should')
 
 Comment = require('../../models/comment')
 
-describe('Model Comment', function() {
+describe('Model Comment', () => {
 
-  it('get', function(done) {
+  it('get', (done) => {
     const id = '5678'
 
-    Comment.get(id, function(err, comment) {
+    Comment.get(id, (err, comment) => {
       comment.id.should.eql(id)
       done()
     })

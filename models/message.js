@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         isRead: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
     });
 
-    Message.associate = function(models) {
+    Message.associate = (models) => {
         models.Message.belongsTo(models.User, {
             as: 'fromUser',
             foreignKey: 'fromUserId',
