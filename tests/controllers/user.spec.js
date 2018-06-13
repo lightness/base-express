@@ -10,6 +10,16 @@ const ContentType = Object.freeze({
     JSON: /application\/json/,
 });
 
+const Accept = Object.freeze({
+    JSON: 'application/json',
+});
+
+const Header = Object.freeze({
+    ACCEPT: 'Accept',
+    AUTHORIZATION: 'Authorization',
+    CONTENT_TYPE: 'Content-Type',
+});
+
 describe('User controller', function() {
     let now;
 
@@ -27,32 +37,40 @@ describe('User controller', function() {
     });
 
     describe('GET /user/me', function() {
+        const URL = '/user/me';
+
         it('should respond with 401, if authorization token is not set', function(done) {
+            const EXPECTED_ERROR_MESSAGE = 'No authorization token was found';
+
             request(app)
-                .get('/user/me')
-                .set('Accept', 'application/json')
-                .expect('Content-Type', ContentType.JSON)
+                .get(URL)
+                .set(Header.ACCEPT, Accept.JSON)
+                .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(function(res) {
                     expect(res.body).toBeDefined();
-                    expect(res.body.message).toBe('No authorization token was found');
+                    expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
         });
 
         it('should respond with 401, if authorization token is malformed', function(done) {
+            const MALFORMED_HEADER = 'Bearer XXX';
+            const EXPECTED_ERROR_MESSAGE = 'jwt malformed';
+
             request(app)
-                .get('/user/me')
-                .set('Accept', 'application/json')
-                .set('Authorization', 'Bearer XXX')
-                .expect('Content-Type', ContentType.JSON)
+                .get(URL)
+                .set(Header.ACCEPT, Accept.JSON)
+                .set(Header.AUTHORIZATION, MALFORMED_HEADER)
+                .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(function(res) {
                     expect(res.body).toBeDefined();
-                    expect(res.body.message).toBe('jwt malformed');
+                    expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(401, done);
         });
 
         it('should respond with 404, if authorization token contains wrong user id', function(done) {
+            const EXPECTED_ERROR_MESSAGE = 'User not found';
             const userToCreate = {
                 email: 'test@test.com',
                 fullName: 'Test User',
@@ -60,17 +78,18 @@ describe('User controller', function() {
             };
 
             db.User.create(userToCreate).then(function(createdUser) {
-                const jwt = jwtHelper.createJwt(createdUser.id + 1);
-                const header = 'Bearer ' + jwt;
+                const authHeader = jwtHelper.createAuthHeader(
+                    createdUser.id + 1,
+                );
 
                 request(app)
-                    .get('/user/me')
-                    .set('Accept', 'application/json')
-                    .set('Authorization', header)
-                    .expect('Content-Type', ContentType.JSON)
+                    .get(URL)
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
                     .expect(function(res) {
                         expect(res.body).toBeDefined();
-                        expect(res.body.message).toBe('User not found');
+                        expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                     })
                     .expect(404, done);
             });
@@ -84,14 +103,13 @@ describe('User controller', function() {
             };
 
             db.User.create(userToCreate).then(function(createdUser) {
-                const jwt = jwtHelper.createJwt(createdUser.id);
-                const header = 'Bearer ' + jwt;
+                const authHeader = jwtHelper.createAuthHeader(createdUser.id);
 
                 request(app)
-                    .get('/user/me')
-                    .set('Accept', 'application/json')
-                    .set('Authorization', header)
-                    .expect('Content-Type', ContentType.JSON)
+                    .get(URL)
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
                     .expect(function(res) {
                         expect(res.body).toBeDefined();
                         expect(res.body.id).toBe(createdUser.id);
@@ -103,6 +121,23 @@ describe('User controller', function() {
                     })
                     .expect(200, done);
             });
+        });
+    });
+
+    describe('GET /user/:id', function() {
+        it('should respond with 401, if authorization token is not set', function(done) {
+            const URL = '/user/1';
+            const EXPECTED_ERROR_MESSAGE = 'No authorization token was found';
+
+            request(app)
+                .get(URL)
+                .set(Header.ACCEPT, Accept.JSON)
+                .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                .expect(function(res) {
+                    expect(res.body).toBeDefined();
+                    expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                })
+                .expect(401, done);
         });
     });
 });
