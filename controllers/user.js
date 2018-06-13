@@ -47,11 +47,12 @@ router.post('/login', function(req, res) {
     const email = req.body.email;
     const password = req.body.password;
 
-    db.User.scope('withPassword').findOne({
-        where: {
-            email: email,
-        },
-    })
+    db.User.scope('withPassword')
+        .findOne({
+            where: {
+                email: email,
+            },
+        })
         .then(function(foundUser) {
             if (!foundUser) {
                 throw new BadCredentialsError(`Bad credentials`);
@@ -64,12 +65,9 @@ router.post('/login', function(req, res) {
                         throw new BadCredentialsError(`Bad credentials`);
                     }
 
-                    return jwtHelper.createJwt(foundUser.id);
+                    res.setHeader('authorization', jwtHelper.createAuthHeader(foundUser.id));
+                    res.status(200).end();
                 });
-        })
-        .then(function(jwt) {
-            res.setHeader('authorization', 'Bearer ' + jwt);
-            res.send(200);
         })
         .catch(errorHandler(res));
 });

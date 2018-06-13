@@ -5,6 +5,7 @@ const app = require('../../app');
 const db = require('../../models');
 const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
+const { AuthHeaderRegexp } = require('../helpers/regexps');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('User controller', function() {
@@ -135,6 +136,103 @@ describe('User controller', function() {
                     expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
                 })
                 .expect(404, done);
+        });
+
+        it('should respond with 200, if user found', function(done) {
+            const userToCreate = mockFactory.create('user', { omit: ['id'] });
+
+            db.User.create(userToCreate).then(function(createdUser) {
+                const URL = '/user/' + createdUser.id;
+
+                const authHeader = jwtHelper.createAuthHeader(1);
+
+                request(app)
+                    .get(URL)
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(function(res) {
+                        expect(res.body).toBeDefined();
+                        expect(res.body.id).toBe(createdUser.id);
+                        expect(res.body.email).toBe(createdUser.email);
+                        expect(res.body.fullName).toBe(createdUser.fullName);
+                        expect(res.body.password).toBeUndefined();
+                        expect(new Date(res.body.createdAt)).toEqual(now);
+                        expect(new Date(res.body.updatedAt)).toEqual(now);
+                    })
+                    .expect(200, done);
+            });
+        });
+    });
+
+    describe('GET /user/login', function() {
+        const URL = '/user/login';
+
+        it('should respond with 200 and contain authorization header, if login was successful', function(done) {
+            const userToCreate = mockFactory.create('user', { omit: ['id'] });
+
+            db.User.create(userToCreate).then(function(createdUser) {
+                const email = createdUser.email;
+                const password = 'any password';
+
+                spyOn(require('bcrypt'), 'compare').and.callFake(() =>
+                    Promise.resolve(true),
+                );
+
+                request(app)
+                    .post(URL)
+                    .send({
+                        email: email,
+                        password: password,
+                    })
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .expect(Header.AUTHORIZATION, AuthHeaderRegexp)
+                    .expect(200, done);
+            });
+        });
+
+        it('should respond with 401, if wrong email was passed', done => {
+            const email = 'wrong@email.com';
+            const password = 'any password';
+
+            request(app)
+                .post(URL)
+                .send({
+                    email: email,
+                    password: password,
+                })
+                .set(Header.ACCEPT, Accept.JSON)
+                .expect(res => {
+                    expect(res.headers).toBeDefined();
+                    expect(res.headers.authorization).not.toBeDefined();
+                })
+                .expect(401, done);
+        });
+
+        it('should respond with 401, if wrong password was passed', function(done) {
+            const userToCreate = mockFactory.create('user', { omit: ['id'] });
+
+            db.User.create(userToCreate).then(function(createdUser) {
+                const email = createdUser.email;
+                const password = 'any password';
+
+                spyOn(require('bcrypt'), 'compare').and.callFake(() =>
+                    Promise.resolve(false),
+                );
+
+                request(app)
+                    .post(URL)
+                    .send({
+                        email: email,
+                        password: password,
+                    })
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .expect(res => {
+                        expect(res.headers).toBeDefined();
+                        expect(res.headers.authorization).not.toBeDefined();
+                    })
+                    .expect(401, done);
+            });
         });
     });
 });
