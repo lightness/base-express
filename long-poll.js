@@ -8,8 +8,8 @@ module.exports = {
         this.longpoll = require('express-longpoll')(app);
 
         this.longpoll.create('/poll/:id', function(req, res, next) {
-            let userId = +req.params.id;
-            let currentUserId = req.user.userId;
+            const userId = +req.params.id;
+            const currentUserId = req.user.userId;
 
             if (userId !== currentUserId) {
                 throw new NotAuthorizedError();

@@ -1,18 +1,19 @@
-let express = require('express');
+const express = require('express');
 
-let db = require('../models');
-let errorHandler = require('../errors/default-handler');
-let UserNotFoundError = require('../errors/user/user-not-found-error');
-let FriendshipNotFoundError = require('../errors/friendship/friendship-not-found-error');
-let FriendshipAlreadyExistsError = require('../errors/friendship/friendship-already-exists-error');
-let FriendshipAlreadyAcceptedError = require('../errors/friendship/friendship-already-accepted-error');
-let FriendshipAlreadyRejectedError = require('../errors/friendship/friendship-already-rejected-error');
+const db = require('../models');
+const errorHandler = require('../errors/default-handler');
+const UserNotFoundError = require('../errors/user/user-not-found-error');
+const FriendshipNotFoundError = require('../errors/friendship/friendship-not-found-error');
+const FriendshipAlreadyExistsError = require('../errors/friendship/friendship-already-exists-error');
+const FriendshipAlreadyAcceptedError = require('../errors/friendship/friendship-already-accepted-error');
+const FriendshipAlreadyRejectedError = require('../errors/friendship/friendship-already-rejected-error');
+const WrongFriendshipTargetError = require('../errors/friendship/wrong-friendship-target-error');
 
 const Op = db.Sequelize.Op;
 const router = express.Router();
 
 router.get('/requests', function(req, res) {
-    let currentUserId = req.user.userId;
+    const currentUserId = req.user.userId;
 
     db.Friendship.findAll({
         where: {
@@ -33,7 +34,7 @@ router.get('/requests', function(req, res) {
 });
 
 router.get('/friends', function(req, res) {
-    let currentUserId = req.user.userId;
+    const currentUserId = req.user.userId;
 
     db.Friendship.findAll({
         where: {
@@ -69,14 +70,19 @@ router.get('/friends', function(req, res) {
 });
 
 router.post('/request', function(req, res) {
-    let fromUserId = req.user.userId;
-    let toUserId = req.body.toUserId;
+    const fromUserId = req.user.userId;
+    const toUserId = req.body.toUserId;
 
-    if (fromUserId === toUserId) {
-        res.send(400, 'You can not be a friend to yourself');
-    }
+    Promise.resolve()
+        .then(function() {
+            if (fromUserId === toUserId) {
+                throw new WrongFriendshipTargetError(
+                    'You can not be a friend to yourself',
+                );
+            }
 
-    db.User.findById(toUserId)
+            return db.User.findById(toUserId);
+        })
         .then(function(foundUser) {
             if (!foundUser) {
                 throw new UserNotFoundError();
@@ -109,8 +115,8 @@ router.post('/request', function(req, res) {
 });
 
 router.put('/:friendshipId/accept', function(req, res) {
-    let friendshipId = req.params.friendshipId;
-    let currentUserId = req.user.userId;
+    const friendshipId = req.params.friendshipId;
+    const currentUserId = req.user.userId;
 
     db.Friendship.findById(friendshipId)
         .then(function(foundFriendshipInstance) {
@@ -138,7 +144,7 @@ router.put('/:friendshipId/accept', function(req, res) {
 });
 
 router.put('/:friendshipId/reject', function(req, res) {
-    let friendshipId = req.params.friendshipId;
+    const friendshipId = req.params.friendshipId;
 
     db.Friendship.findById(friendshipId)
         .then(function(foundFriendshipInstance) {
@@ -166,8 +172,8 @@ router.put('/:friendshipId/reject', function(req, res) {
 });
 
 router.delete('/:friendshipId', function(req, res) {
-    let friendshipId = req.params.friendshipId;
-    let currentUserId = req.user.userId;
+    const friendshipId = req.params.friendshipId;
+    const currentUserId = req.user.userId;
 
     db.Friendship.findById(friendshipId)
         .then(function(foundFriendshipInstance) {

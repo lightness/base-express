@@ -1,19 +1,19 @@
-let _ = require('lodash');
-let bcrypt = require('bcrypt');
-let express = require('express');
+const _ = require('lodash');
+const bcrypt = require('bcrypt');
+const express = require('express');
 
-let db = require('../models');
-let jwtHelper = require('../helpers/jwt');
-let errorHandler = require('../errors/default-handler');
-let UserNotForundError = require('../errors/user/user-not-found-error');
-let BadCredentialsError = require('../errors/user/bad-credentials-error');
-let UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
+const db = require('../models');
+const jwtHelper = require('../helpers/jwt');
+const errorHandler = require('../errors/default-handler');
+const UserNotForundError = require('../errors/user/user-not-found-error');
+const BadCredentialsError = require('../errors/user/bad-credentials-error');
+const UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
 
 const Op = db.Sequelize.Op;
 const router = express.Router();
 
 router.get('/me', function(req, res) {
-    let currentUserId = req.user.userId;
+    const currentUserId = req.user.userId;
 
     db.User.findById(currentUserId)
         .then(function(foundUser) {
@@ -27,7 +27,7 @@ router.get('/me', function(req, res) {
 });
 
 router.get('/:id', function(req, res) {
-    let targetUserId = req.params.id;
+    const targetUserId = req.params.id;
 
     db.User.findById(targetUserId)
         .then(function(foundUser) {
@@ -44,12 +44,12 @@ router.get('/:id', function(req, res) {
 });
 
 router.post('/login', function(req, res) {
-    let email = req.body.email;
-    let password = req.body.password;
+    const email = req.body.email;
+    const password = req.body.password;
 
     db.User.scope('withPassword').findOne({
         where: {
-            email: email, // TODO: Make criteria case insensitive
+            email: email,
         },
     })
         .then(function(foundUser) {
@@ -75,8 +75,8 @@ router.post('/login', function(req, res) {
 });
 
 router.post('/register', function(req, res) {
-    let password = req.body.password;
-    let email = req.body.email;
+    const password = req.body.password;
+    const email = req.body.email;
 
     db.User.findOne({
         where: { email: email },
@@ -102,8 +102,8 @@ router.post('/register', function(req, res) {
 });
 
 router.get('/', function(req, res) {
-    let q = req.query.q;
-    let currentUserId = req.user.userId;
+    const q = req.query.q;
+    const currentUserId = req.user.userId;
 
     db.User.findAll({
         where: {

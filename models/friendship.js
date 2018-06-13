@@ -1,14 +1,14 @@
 'use strict';
-let _ = require('lodash');
+const _ = require('lodash');
 
 module.exports = (sequelize, DataTypes) => {
-    let FriendshipStatus = Object.freeze({
+    const FriendshipStatus = Object.freeze({
         REQUESTED: 'requested',
         ACCEPTED: 'accepted',
         REJECTED: 'rejected',
     });
 
-    let Friendship = sequelize.define('Friendship', {
+    const Friendship = sequelize.define('Friendship', {
         fromUserId: { type: DataTypes.INTEGER, allowNull: false },
         toUserId: { type: DataTypes.INTEGER, allowNull: false },
         status: {

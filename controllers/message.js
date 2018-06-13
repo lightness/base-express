@@ -1,56 +1,80 @@
-let express = require('express');
+const express = require('express');
 
-let db = require('../models');
-let longPoll = require('../long-poll');
+const db = require('../models');
+const longPoll = require('../long-poll');
+const errorHandler = require('../errors/default-handler');
+const MessageRangeError = require('../errors/mesasge/message-range-error');
+const WrongMessageTargetError = require('../errors/mesasge/wrong-message-target-error');
 
 const Op = db.Sequelize.Op;
 const router = express.Router();
 
 router.post('/send', function(req, res) {
-    let fromUserId = req.user.userId;
-    let toUserId = req.body.toUserId;
+    const fromUserId = req.user.userId;
+    const toUserId = req.body.toUserId;
 
-    if (fromUserId === toUserId) {
-        res.send(400, 'You can not send a message to yourself');
-    }
+    Promise.resolve()
+        .then(function() {
+            if (fromUserId === toUserId) {
+                throw new WrongMessageTargetError('You can not send a message to yourself');
+            }
 
-    db.Message.create({
-        fromUserId: fromUserId,
-        toUserId: toUserId,
-        text: req.body.text,
-    }).then(function(createdMessage) {
-        longPoll.publish(createdMessage.toUserId, createdMessage);
+            return db.User.findById(toUserId);
+        })
+        .then(function(foundToUser) {
+            if (!foundToUser) {
+                throw new WrongMessageTargetError('Wrong target user id specified');
+            }
 
-        res.json(createdMessage);
-    });
+            return db.Message.create({
+                fromUserId: fromUserId,
+                toUserId: toUserId,
+                text: req.body.text,
+            });
+        })
+        .then(function(createdMessage) {
+            longPoll.publish(createdMessage.toUserId, createdMessage);
+
+            res.json(createdMessage);
+        })
+        .catch(errorHandler(res));
 });
 
 router.put('/markAsRead', function(req, res) {
-    let currentUserId = req.user.userId;
-    let fromId = req.body.fromId;
-    let toId = req.body.toId;
+    const currentUserId = req.user.userId;
+    const fromId = req.body.fromId;
+    const toId = req.body.toId;
 
-    if (!fromId || !toId) {
-        throw new Error('RangeError: "fromId" and "toId" should be specified');
-    }
+    Promise.resolve()
+        .then(function() {
+            if (!fromId || !toId) {
+                throw new MessageRangeError(
+                    'Fields "fromId" and "toId" should be specified',
+                );
+            }
 
-    if (fromId && toId && fromId > toId) {
-        throw new Error('RangeError: "fromId" should be less than "toId"'); // TODO
-    }
+            if (fromId && toId && fromId > toId) {
+                throw new MessageRangeError(
+                    'Value of "fromId" should be less than value of "toId"',
+                );
+            }
 
-    return db.Message.update(
-        { isRead: true },
-        {
-            where: {
-                id: {
-                    [Op.between]: [fromId, toId],
+            return db.Message.update(
+                { isRead: true },
+                {
+                    where: {
+                        id: {
+                            [Op.between]: [fromId, toId],
+                        },
+                        toUserId: currentUserId,
+                    },
                 },
-                toUserId: currentUserId
-            },
-        },
-    ).then(function() {
-        res.status(200).send({});
-    });
+            );
+        })
+        .then(function() {
+            res.json({});
+        })
+        .catch(errorHandler(res));
 });
 
 module.exports = router;

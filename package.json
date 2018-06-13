@@ -1,11 +1,11 @@
 {
-  "name": "Base",
+  "name": "base-express",
   "version": "1.0.0",
   "description": "Basic structure for Express web apps.",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "test": "node_modules/.bin/mocha tests/**"
+    "start": "node start.js",
+    "test": "cross-env NODE_ENV=test node tests/main.js"
   },
   "keywords": [
     "base",
@@ -19,6 +19,7 @@
   "dependencies": {
     "bcrypt": "^2.0.1",
     "body-parser": "^1.12.3",
+    "cross-env": "^5.1.6",
     "error-factory": "^0.1.6",
     "express": "^4.12.3",
     "express-jwt": "^5.3.1",
@@ -31,7 +32,11 @@
     "sequelize-cli": "^4.0.0"
   },
   "devDependencies": {
-    "mocha": "^2.2.4",
-    "should": "^6.0.1"
+    "jasmine": "^3.1.0",
+    "jasmine-console-reporter": "^3.0.2",
+    "jasmine-node": "^1.14.5",
+    "should": "^6.0.1",
+    "sqlite3": "^4.0.0",
+    "supertest": "^3.1.0"
   }
 }

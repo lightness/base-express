@@ -1,8 +1,8 @@
-let errorFactory = require('error-factory');
+const errorFactory = require('error-factory');
 
-let AppError = require('./app-error');
+const AppError = require('./app-error');
 
-let NotAuthorizedError = errorFactory(
+const NotAuthorizedError = errorFactory(
     'NotAuthorizedError',
     {
         message: 'Not authorized',

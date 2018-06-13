@@ -5,7 +5,7 @@ Comment = require('../../models/comment')
 describe('Model Comment', function() {
 
   it('get', function(done) {
-    let id = '5678'
+    const id = '5678'
 
     Comment.get(id, function(err, comment) {
       comment.id.should.eql(id)

@@ -1,4 +1,4 @@
-let jsonwebtoken = require('jsonwebtoken');
+const jsonwebtoken = require('jsonwebtoken');
 
 module.exports = {
     secret: 'SECREt42',

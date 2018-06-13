@@ -1,6 +1,6 @@
-let errorFactory = require('error-factory');
+const errorFactory = require('error-factory');
 
-let AppError = errorFactory('AppError', {
+const AppError = errorFactory('AppError', {
     message: 'Something went wrong',
 });
 

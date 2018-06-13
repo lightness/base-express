@@ -1,13 +1,10 @@
-let express = require('express');
-let bodyParser = require('body-parser');
-let jwt = require('express-jwt');
+const express = require('express');
+const bodyParser = require('body-parser');
+const jwt = require('express-jwt');
 
-let db = require('./models');
-let longPoll = require('./long-poll');
-let jwtHelper = require('./helpers/jwt');
+const jwtHelper = require('./helpers/jwt');
 
-let app = express();
-let port = process.env.PORT || 3000;
+const app = express();
 
 app.set('views', __dirname + '/views');
 app.engine('jade', require('jade').__express);
@@ -23,11 +20,4 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(require('./controllers'));
 
-// { force: true }
-db.sequelize.sync().then(() => {
-    app.listen(port, function() {
-        console.log('Listening on port ' + port);
-    });
-
-    longPoll.setup(app);
-});
+module.exports = app;
