@@ -1,10 +1,12 @@
 const _ = require('lodash');
+const Joi = require('joi');
 const bcrypt = require('bcrypt');
 const express = require('express');
 
 const db = require('../models');
 const jwtHelper = require('../helpers/jwt');
 const errorHandler = require('../errors/default-handler');
+const ValidationError = require('../errors/validation-error');
 const UserNotForundError = require('../errors/user/user-not-found-error');
 const BadCredentialsError = require('../errors/user/bad-credentials-error');
 const UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
@@ -78,10 +80,28 @@ router.post('/login', (req, res) => {
 router.post('/register', (req, res) => {
     const password = req.body.password;
     const email = req.body.email;
+    const fullName = req.body.fullName;
 
-    db.User.findOne({
-        where: { email: email },
-    })
+    Promise.resolve()
+        .then(function() {
+            const validationSchema = {
+                email: Joi.string()
+                    .email()
+                    .required(),
+                fullName: Joi.string().required(),
+                password: Joi.string()
+                    .min(8)
+                    .required(),
+            };
+
+            const validationResult = Joi.validate(req.body, validationSchema);
+
+            if (validationResult.error) {
+                throw new ValidationError(validationResult.error.details[0].message);
+            }
+
+            return db.User.findOne({ where: { email } });
+        })
         .then(foundUser => {
             if (foundUser) {
                 throw new UserAlreadyExistsError();
@@ -89,15 +109,10 @@ router.post('/register', (req, res) => {
 
             return bcrypt.hash(password, 10);
         })
-        .then(hash => {
-            return db.User.create({
-                email: email,
-                password: hash,
-                fullName: req.body.fullName,
-            });
-        })
-        .then(createdUser => {
-            res.json(createdUser);
+        .then(hash => db.User.create({ email, password: hash, fullName }))
+        .then(createdUserInstance => {
+            let response = _.omit(createdUserInstance.toJSON(), ['password']);
+            res.json(response);
         })
         .catch(errorHandler(res));
 });

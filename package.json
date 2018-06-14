@@ -25,6 +25,7 @@
     "express-jwt": "^5.3.1",
     "express-longpoll": "0.0.4",
     "jade": "^1.9.2",
+    "joi": "^13.4.0",
     "jsonwebtoken": "^8.2.2",
     "lodash": "^4.17.10",
     "pg": "^7.4.3",
