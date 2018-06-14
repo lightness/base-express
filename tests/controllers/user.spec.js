@@ -10,6 +10,8 @@ const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('User controller', () => {
     let now;
+    let currentUser;
+    let authorizationHeader;
 
     beforeEach(done => {
         now = new Date();
@@ -17,7 +19,18 @@ describe('User controller', () => {
         jasmine.clock().install();
         jasmine.clock().mockDate(now);
 
-        db.sequelize.sync({ force: true }).then(done);
+        db.sequelize
+            .sync({ force: true })
+            .then(() =>
+                db.User.create(mockFactory.create('user', { omit: ['id'] })),
+            )
+            .then(createdUser => {
+                currentUser = createdUser.toJSON();
+                authorizationHeader = jwtHelper.createAuthHeader(
+                    createdUser.id,
+                );
+            })
+            .then(done);
     });
 
     afterEach(() => {
@@ -124,12 +137,10 @@ describe('User controller', () => {
             const URL = '/user/5';
             const EXPECTED_ERROR_MESSAGE = 'User not found';
 
-            const authHeader = jwtHelper.createAuthHeader(1);
-
             request(app)
                 .get(URL)
                 .set(Header.ACCEPT, Accept.JSON)
-                .set(Header.AUTHORIZATION, authHeader)
+                .set(Header.AUTHORIZATION, authorizationHeader)
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(res => {
                     expect(res.body).toBeDefined();
@@ -144,12 +155,10 @@ describe('User controller', () => {
             db.User.create(userToCreate).then(createdUser => {
                 const URL = '/user/' + createdUser.id;
 
-                const authHeader = jwtHelper.createAuthHeader(1);
-
                 request(app)
                     .get(URL)
                     .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authHeader)
+                    .set(Header.AUTHORIZATION, authorizationHeader)
                     .expect(Header.CONTENT_TYPE, ContentType.JSON)
                     .expect(res => {
                         expect(res.body).toBeDefined();
@@ -283,8 +292,8 @@ describe('User controller', () => {
             const userToRegister = mockFactory.create('user', {
                 omit: ['id'],
                 defaults: {
-                    email: 'wrong format'
-                }
+                    email: 'wrong format',
+                },
             });
 
             request(app)
@@ -336,12 +345,13 @@ describe('User controller', () => {
         });
 
         it('should respond with 400, if password is too short', done => {
-            const EXPECTED_ERROR_MESSAGE = '"password" length must be at least 8 characters long';
+            const EXPECTED_ERROR_MESSAGE =
+                '"password" length must be at least 8 characters long';
             const userToRegister = mockFactory.create('user', {
                 omit: ['id'],
                 defaults: {
-                    password: 'short'
-                }
+                    password: 'short',
+                },
             });
 
             request(app)
@@ -395,6 +405,96 @@ describe('User controller', () => {
                         })
                         .finally(done);
                 });
+        });
+    });
+
+    describe('GET /user?q', () => {
+        const URL = '/user';
+
+        it('should response with 200 and return list of users, if email contains query token', done => {
+            const userToRegister = mockFactory.create('user', { omit: ['id'] });
+            const partOfEmail = userToRegister.email.slice(1, -1);
+
+            db.User.create(userToRegister).then(createdUser => {
+                request(app)
+                    .get(URL + '?q=' + encodeURIComponent(partOfEmail))
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authorizationHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(res => {
+                        expect(res.body).toBeDefined();
+                        expect(res.body).toEqual(jasmine.any(Array));
+                        expect(res.body.length).toBe(1);
+                        expect(res.body[0]).toBeDefined();
+                        expect(res.body[0].id).toBe(createdUser.id);
+                        expect(res.body[0].email).toBe(userToRegister.email);
+                        expect(res.body[0].fullName).toBe(
+                            userToRegister.fullName,
+                        );
+                        expect(res.body[0].password).not.toBeDefined();
+                    })
+                    .expect(200, done);
+            });
+        });
+
+        it('should response with 200 and return list of users, if full name contains query token', done => {
+            const userToRegister = mockFactory.create('user', { omit: ['id'] });
+            const partOfFullName = userToRegister.fullName.slice(1, -1);
+
+            db.User.create(userToRegister).then(createdUser => {
+                request(app)
+                    .get(URL + '?q=' + encodeURIComponent(partOfFullName))
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authorizationHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(res => {
+                        expect(res.body).toBeDefined();
+                        expect(res.body).toEqual(jasmine.any(Array));
+                        expect(res.body.length).toBe(1);
+                        expect(res.body[0]).toBeDefined();
+                        expect(res.body[0].id).toBe(createdUser.id);
+                        expect(res.body[0].email).toBe(userToRegister.email);
+                        expect(res.body[0].fullName).toBe(
+                            userToRegister.fullName,
+                        );
+                        expect(res.body[0].password).not.toBeDefined();
+                    })
+                    .expect(200, done);
+            });
+        });
+
+        it('should response with 200 and return empty list, if no matches', done => {
+            const userToRegister = mockFactory.create('user', { omit: ['id'] });
+            const partOfFullName = userToRegister.fullName.slice(1, -1);
+            const query = partOfFullName + partOfFullName;
+
+            db.User.create(userToRegister).then(() => {
+                request(app)
+                    .get(URL + '?q=' + encodeURIComponent(query))
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .set(Header.AUTHORIZATION, authorizationHeader)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(res => {
+                        expect(res.body).toBeDefined();
+                        expect(res.body).toEqual(jasmine.any(Array));
+                        expect(res.body.length).toBe(0);
+                    })
+                    .expect(200, done);
+            });
+        });
+
+        it('should response with 200 and do not return current user, if matches query', done => {
+            request(app)
+                .get(URL + '?q=' + encodeURIComponent(currentUser.email))
+                .set(Header.ACCEPT, Accept.JSON)
+                .set(Header.AUTHORIZATION, authorizationHeader)
+                .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                .expect(res => {
+                    expect(res.body).toBeDefined();
+                    expect(res.body).toEqual(jasmine.any(Array));
+                    expect(res.body.length).toBe(0);
+                })
+                .expect(200, done);
         });
     });
 });
