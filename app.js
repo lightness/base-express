@@ -6,11 +6,14 @@ const jwtHelper = require('./helpers/jwt');
 
 const app = express();
 
-app.set('views', __dirname + '/views');
-app.engine('jade', require('jade').__express);
-app.set('view engine', 'jade');
+// ### Example how to serve jade views
+// app.set('views', __dirname + '/views');
+// app.engine('jade', require('jade').__express);
+// app.set('view engine', 'jade');
 
-app.use(express.static(__dirname + '/public'));
+// ### Example how to serve static files
+// app.use(express.static(__dirname + '/public'));
+
 app.use(
     jwt({ secret: jwtHelper.secret }).unless({
         path: ['/user/login', '/user/register'],
