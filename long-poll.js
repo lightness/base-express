@@ -1,6 +1,6 @@
 const _ = require('lodash');
 
-const db = require('./models');
+const { Message } = require('./models');
 const NotAuthorizedError = require('./errors/not-authorized-error');
 
 module.exports = {
@@ -17,7 +17,7 @@ module.exports = {
 
             req.id = currentUserId;
 
-            db.Message.findAll({
+            Message.findAll({
                 where: {
                     toUserId: currentUserId,
                     isRead: false,

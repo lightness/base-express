@@ -1,13 +1,13 @@
 const app = require('./app');
-const db = require('./models');
+const sequelize = require('./models/sequelize');
 const longPoll = require('./long-poll');
 
 const port = process.env.PORT || 3000;
 
 console.log(">>> ENV", process.env.NODE_ENV);
 
-// db.sequelize.sync({ force: true }).then(() => {
-db.sequelize.sync({ force: true }).then(() => {
+// sequelize.sync({ force: true }).then(() => {
+sequelize.sync({ force: true }).then(() => {
     app.listen(port, () => {
         console.log('Listening on port ' + port);
     });

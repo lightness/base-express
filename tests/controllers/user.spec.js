@@ -2,7 +2,8 @@ const _ = require('lodash');
 const request = require('supertest');
 
 const app = require('../../app');
-const db = require('../../models');
+const { User } = require('../../models');
+const sequelize = require('../../models/sequelize');
 const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
 const { AuthHeaderRegexp } = require('../helpers/regexps');
@@ -19,10 +20,10 @@ describe('User controller', () => {
         jasmine.clock().install();
         jasmine.clock().mockDate(now);
 
-        db.sequelize
+        sequelize
             .sync({ force: true })
             .then(() =>
-                db.User.create(mockFactory.create('user', { omit: ['id'] })),
+                User.create(mockFactory.create('user', { omit: ['id'] })),
             )
             .then(createdUser => {
                 currentUser = createdUser.toJSON();
@@ -74,7 +75,7 @@ describe('User controller', () => {
             const EXPECTED_ERROR_MESSAGE = 'User not found';
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(createdUser => {
+            User.create(userToCreate).then(createdUser => {
                 const authHeader = jwtHelper.createAuthHeader(
                     createdUser.id + 1,
                 );
@@ -95,7 +96,7 @@ describe('User controller', () => {
         it('should respond with 200, if authorization token is correct', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(createdUser => {
+            User.create(userToCreate).then(createdUser => {
                 const authHeader = jwtHelper.createAuthHeader(createdUser.id);
 
                 request(app)
@@ -152,7 +153,7 @@ describe('User controller', () => {
         it('should respond with 200, if user found', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(createdUser => {
+            User.create(userToCreate).then(createdUser => {
                 const URL = '/user/' + createdUser.id;
 
                 request(app)
@@ -180,11 +181,11 @@ describe('User controller', () => {
         it('should respond with 200 and contain authorization header, if login was successful', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(createdUser => {
+            User.create(userToCreate).then(createdUser => {
                 const email = createdUser.email;
                 const password = 'any password';
 
-                spyOn(require('bcrypt'), 'compare').and.callFake(() =>
+                spyOn(require('bcryptjs'), 'compare').and.callFake(() =>
                     Promise.resolve(true),
                 );
 
@@ -222,11 +223,11 @@ describe('User controller', () => {
         it('should respond with 401, if wrong password was passed', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(createdUser => {
+            User.create(userToCreate).then(createdUser => {
                 const email = createdUser.email;
                 const password = 'any password';
 
-                spyOn(require('bcrypt'), 'compare').and.callFake(() =>
+                spyOn(require('bcryptjs'), 'compare').and.callFake(() =>
                     Promise.resolve(false),
                 );
 
@@ -255,7 +256,7 @@ describe('User controller', () => {
                 'User with such email already exists';
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            db.User.create(userToCreate).then(() => {
+            User.create(userToCreate).then(() => {
                 request(app)
                     .post(URL)
                     .send(userToCreate)
@@ -399,7 +400,7 @@ describe('User controller', () => {
                     createdUserId = res.body.id;
                 })
                 .end(() => {
-                    db.User.findById(createdUserId)
+                    User.findById(createdUserId)
                         .then(foundUser => {
                             expect(foundUser).toBeDefined();
                         })
@@ -411,11 +412,30 @@ describe('User controller', () => {
     describe('GET /user?q', () => {
         const URL = '/user';
 
+        it('should respond with 401, if authorization token is not set', done => {
+            const EXPECTED_ERROR_MESSAGE = 'No authorization token was found';
+
+            const userToRegister = mockFactory.create('user', { omit: ['id'] });
+            const partOfEmail = userToRegister.email.slice(1, -1);
+
+            User.create(userToRegister).then(() => {
+                request(app)
+                    .get(URL + '?q=' + encodeURIComponent(partOfEmail))
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(res => {
+                        expect(res.body).toBeDefined();
+                        expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                    })
+                    .expect(401, done);
+            });
+        });
+
         it('should response with 200 and return list of users, if email contains query token', done => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfEmail = userToRegister.email.slice(1, -1);
 
-            db.User.create(userToRegister).then(createdUser => {
+            User.create(userToRegister).then(createdUser => {
                 request(app)
                     .get(URL + '?q=' + encodeURIComponent(partOfEmail))
                     .set(Header.ACCEPT, Accept.JSON)
@@ -441,7 +461,7 @@ describe('User controller', () => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfFullName = userToRegister.fullName.slice(1, -1);
 
-            db.User.create(userToRegister).then(createdUser => {
+            User.create(userToRegister).then(createdUser => {
                 request(app)
                     .get(URL + '?q=' + encodeURIComponent(partOfFullName))
                     .set(Header.ACCEPT, Accept.JSON)
@@ -468,7 +488,7 @@ describe('User controller', () => {
             const partOfFullName = userToRegister.fullName.slice(1, -1);
             const query = partOfFullName + partOfFullName;
 
-            db.User.create(userToRegister).then(() => {
+            User.create(userToRegister).then(() => {
                 request(app)
                     .get(URL + '?q=' + encodeURIComponent(query))
                     .set(Header.ACCEPT, Accept.JSON)

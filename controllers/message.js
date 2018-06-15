@@ -1,12 +1,12 @@
 const express = require('express');
+const { Op } = require('sequelize');
 
-const db = require('../models');
+const { Message, User } = require('../models');
 const longPoll = require('../long-poll');
 const errorHandler = require('../errors/default-handler');
 const MessageRangeError = require('../errors/mesasge/message-range-error');
 const WrongMessageTargetError = require('../errors/mesasge/wrong-message-target-error');
 
-const Op = db.Sequelize.Op;
 const router = express.Router();
 
 router.post('/send', (req, res) => {
@@ -21,7 +21,7 @@ router.post('/send', (req, res) => {
                 );
             }
 
-            return db.User.findById(toUserId);
+            return User.findById(toUserId);
         })
         .then(foundToUser => {
             if (!foundToUser) {
@@ -30,7 +30,7 @@ router.post('/send', (req, res) => {
                 );
             }
 
-            return db.Message.create({
+            return Message.create({
                 fromUserId: fromUserId,
                 toUserId: toUserId,
                 text: req.body.text,
@@ -63,7 +63,7 @@ router.put('/markAsRead', (req, res) => {
                 );
             }
 
-            return db.Message.update(
+            return Message.update(
                 { isRead: true },
                 {
                     where: {

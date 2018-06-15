@@ -1,9 +1,10 @@
 const _ = require('lodash');
 const Joi = require('joi');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const express = require('express');
+const { Op } = require('sequelize');
 
-const db = require('../models');
+const { User } = require('../models');
 const jwtHelper = require('../helpers/jwt');
 const errorHandler = require('../errors/default-handler');
 const ValidationError = require('../errors/validation-error');
@@ -11,13 +12,12 @@ const UserNotForundError = require('../errors/user/user-not-found-error');
 const BadCredentialsError = require('../errors/user/bad-credentials-error');
 const UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
 
-const Op = db.Sequelize.Op;
 const router = express.Router();
 
 router.get('/me', (req, res) => {
     const currentUserId = req.user.userId;
 
-    db.User.findById(currentUserId)
+    User.findById(currentUserId)
         .then(foundUser => {
             if (!foundUser) {
                 throw new UserNotForundError();
@@ -31,7 +31,7 @@ router.get('/me', (req, res) => {
 router.get('/:id', (req, res) => {
     const targetUserId = req.params.id;
 
-    db.User.findById(targetUserId)
+    User.findById(targetUserId)
         .then(foundUser => {
             if (!foundUser) {
                 throw new UserNotForundError();
@@ -49,7 +49,7 @@ router.post('/login', (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
 
-    db.User.scope('withPassword')
+    User.scope('withPassword')
         .findOne({
             where: {
                 email: email,
@@ -100,7 +100,7 @@ router.post('/register', (req, res) => {
                 throw new ValidationError(validationResult.error.details[0].message);
             }
 
-            return db.User.findOne({ where: { email } });
+            return User.findOne({ where: { email } });
         })
         .then(foundUser => {
             if (foundUser) {
@@ -109,7 +109,7 @@ router.post('/register', (req, res) => {
 
             return bcrypt.hash(password, 10);
         })
-        .then(hash => db.User.create({ email, password: hash, fullName }))
+        .then(hash => User.create({ email, password: hash, fullName }))
         .then(createdUserInstance => {
             let response = _.omit(createdUserInstance.toJSON(), ['password']);
             res.json(response);
@@ -121,7 +121,7 @@ router.get('/', (req, res) => {
     const q = req.query.q;
     const currentUserId = req.user.userId;
 
-    db.User.findAll({
+    User.findAll({
         where: {
             [Op.or]: [
                 {
