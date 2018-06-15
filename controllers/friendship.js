@@ -109,10 +109,11 @@ router.put('/:friendshipId/accept', (req, res) => {
                 throw new FriendshipNotFoundError();
             }
 
-            if (
-                foundFriendshipInstance.status === Friendship.Status.ACCEPTED
-            ) {
-                throw new FriendshipAlreadyAcceptedError();
+            switch (foundFriendshipInstance.status) {
+                case Friendship.Status.ACCEPTED:
+                    throw new FriendshipAlreadyAcceptedError();
+                case Friendship.Status.REJECT:
+                    throw new FriendshipAlreadyRejectedError();
             }
 
             return foundFriendshipInstance.update({
@@ -137,10 +138,11 @@ router.put('/:friendshipId/reject', (req, res) => {
                 throw new FriendshipNotFoundError();
             }
 
-            if (
-                foundFriendshipInstance.status === Friendship.Status.REJECT
-            ) {
-                throw new FriendshipAlreadyRejectedError();
+            switch (foundFriendshipInstance.status) {
+                case Friendship.Status.ACCEPTED:
+                    throw new FriendshipAlreadyAcceptedError();
+                case Friendship.Status.REJECT:
+                    throw new FriendshipAlreadyRejectedError();
             }
 
             return foundFriendshipInstance.update({
