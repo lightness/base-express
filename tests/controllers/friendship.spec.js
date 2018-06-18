@@ -923,7 +923,7 @@ describe('Friendship controller', () => {
                 });
         });
 
-        it('should respond with 200, if all conditions passed', done => {
+        it('should respond with 204, if all conditions passed', done => {
             const friend = mockFactory.create('user', { omit: ['id'] });
 
             User.create(friend)
@@ -944,8 +944,7 @@ describe('Friendship controller', () => {
                         .delete(getUrl(createdFriendship.id))
                         .set(Header.ACCEPT, Accept.JSON)
                         .set(Header.AUTHORIZATION, authorizationHeader)
-                        .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                        .expect(200, done);
+                        .expect(204, done);
                 });
         });
 

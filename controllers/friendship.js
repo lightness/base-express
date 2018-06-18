@@ -163,7 +163,7 @@ router.delete('/:friendshipId', (req, res) => {
             return foundFriendshipInstance.destroy();
         })
         .then(() => {
-            res.status(200).json({});
+            res.status(204).end();
         })
         .catch(errorHandler(res));
 });

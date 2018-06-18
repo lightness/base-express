@@ -67,7 +67,7 @@ router.put('/mark-as-read', (req, res) => {
             );
         })
         .then(() => {
-            res.json({});
+            res.status(204).end();
         })
         .catch(errorHandler(res));
 });
