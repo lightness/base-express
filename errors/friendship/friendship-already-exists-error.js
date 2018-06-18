@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const FriendshipAlreadyExistsError = errorFactory(
     'FriendshipAlreadyExistsError',
@@ -12,4 +12,4 @@ const FriendshipAlreadyExistsError = errorFactory(
     AppError,
 );
 
-module.exports = FriendshipAlreadyExistsError;
+module.exports = { FriendshipAlreadyExistsError };

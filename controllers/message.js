@@ -3,10 +3,8 @@ const express = require('express');
 const { Op } = require('sequelize');
 
 const longPoll = require('../long-poll');
-const errorHandler = require('../errors/default-handler');
-const MessageRangeError = require('../errors/mesasge/message-range-error');
-const WrongMessageTargetError = require('../errors/mesasge/wrong-message-target-error');
 const { Message, User } = require('../models');
+const { errorHandler, MessageRangeError, WrongMessageTargetError } = require('../errors');
 
 const router = express.Router();
 
@@ -17,18 +15,14 @@ router.post('/send', (req, res) => {
     Promise.resolve()
         .then(() => {
             if (fromUserId === toUserId) {
-                throw new WrongMessageTargetError(
-                    'You can not send a message to yourself',
-                );
+                throw new WrongMessageTargetError('You can not send a message to yourself');
             }
 
             return User.findById(toUserId);
         })
         .then(foundToUser => {
             if (!foundToUser) {
-                throw new WrongMessageTargetError(
-                    'Wrong target user id specified',
-                );
+                throw new WrongMessageTargetError('Wrong target user id specified');
             }
 
             return Message.create({
@@ -53,15 +47,11 @@ router.put('/markAsRead', (req, res) => {
     Promise.resolve()
         .then(() => {
             if (!fromId || !toId) {
-                throw new MessageRangeError(
-                    'Fields "fromId" and "toId" should be specified',
-                );
+                throw new MessageRangeError('Fields "fromId" and "toId" should be specified');
             }
 
             if (fromId && toId && fromId > toId) {
-                throw new MessageRangeError(
-                    'Value of "fromId" should be less than value of "toId"',
-                );
+                throw new MessageRangeError('Value of "fromId" should be less than value of "toId"');
             }
 
             return Message.update(

@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const MessageRangeError = errorFactory(
     'MessageRangeError',

@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('./app-error');
+const { AppError } = require('./app-error');
 
 const ValidationError = errorFactory(
     'ValidationError',
@@ -12,4 +12,4 @@ const ValidationError = errorFactory(
     AppError,
 );
 
-module.exports = ValidationError;
+module.exports = { ValidationError };

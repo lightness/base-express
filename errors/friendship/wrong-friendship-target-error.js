@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const WrongFriendshipTargetError = errorFactory(
     'WrongFriendshipTargetError',
@@ -12,4 +12,4 @@ const WrongFriendshipTargetError = errorFactory(
     AppError,
 );
 
-module.exports = WrongFriendshipTargetError;
+module.exports = { WrongFriendshipTargetError };

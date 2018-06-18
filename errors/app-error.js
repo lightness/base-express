@@ -5,4 +5,4 @@ const AppError = errorFactory('AppError', {
     message: 'Something went wrong',
 });
 
-module.exports = AppError;
+module.exports = { AppError };

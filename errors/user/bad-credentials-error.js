@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const BadCredentialsError = errorFactory(
     'BadCredentialsError',
@@ -12,4 +12,4 @@ const BadCredentialsError = errorFactory(
     AppError,
 );
 
-module.exports = BadCredentialsError;
+module.exports = { BadCredentialsError };

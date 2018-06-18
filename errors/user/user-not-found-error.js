@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const UserNotFoundError = errorFactory(
     'UserNotFoundError',
@@ -12,4 +12,4 @@ const UserNotFoundError = errorFactory(
     AppError,
 );
 
-module.exports = UserNotFoundError;
+module.exports = { UserNotFoundError };

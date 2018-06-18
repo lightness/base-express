@@ -6,12 +6,14 @@ const express = require('express');
 const { Op } = require('sequelize');
 
 const jwtHelper = require('../helpers/jwt');
-const errorHandler = require('../errors/default-handler');
-const ValidationError = require('../errors/validation-error');
-const UserNotForundError = require('../errors/user/user-not-found-error');
-const BadCredentialsError = require('../errors/user/bad-credentials-error');
-const UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
 const { User } = require('../models');
+const {
+    errorHandler,
+    ValidationError,
+    UserNotFoundError,
+    BadCredentialsError,
+    UserAlreadyExistsError,
+} = require('../errors');
 
 const router = express.Router();
 
@@ -21,7 +23,7 @@ router.get('/me', (req, res) => {
     User.findById(currentUserId)
         .then(foundUser => {
             if (!foundUser) {
-                throw new UserNotForundError();
+                throw new UserNotFoundError();
             }
 
             res.json(foundUser);
@@ -35,7 +37,7 @@ router.get('/:id', (req, res) => {
     User.findById(targetUserId)
         .then(foundUser => {
             if (!foundUser) {
-                throw new UserNotForundError();
+                throw new UserNotFoundError();
             }
 
             // In future there should be privacy policy checks
@@ -61,19 +63,14 @@ router.post('/login', (req, res) => {
                 throw new BadCredentialsError(`Bad credentials`);
             }
 
-            return bcrypt
-                .compare(password, foundUser.password)
-                .then(isPasswordCorrect => {
-                    if (!isPasswordCorrect) {
-                        throw new BadCredentialsError(`Bad credentials`);
-                    }
+            return bcrypt.compare(password, foundUser.password).then(isPasswordCorrect => {
+                if (!isPasswordCorrect) {
+                    throw new BadCredentialsError(`Bad credentials`);
+                }
 
-                    res.setHeader(
-                        'authorization',
-                        jwtHelper.createAuthHeader(foundUser.id),
-                    );
-                    res.status(200).end();
-                });
+                res.setHeader('authorization', jwtHelper.createAuthHeader(foundUser.id));
+                res.status(200).end();
+            });
         })
         .catch(errorHandler(res));
 });

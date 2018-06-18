@@ -1,7 +1,7 @@
 'use strict';
 const errorFactory = require('error-factory');
 
-const AppError = require('../app-error');
+const { AppError } = require('../app-error');
 
 const UserAlreadyExistsError = errorFactory(
     'UserAlreadyExistsError',
@@ -12,4 +12,4 @@ const UserAlreadyExistsError = errorFactory(
     AppError,
 );
 
-module.exports = UserAlreadyExistsError;
+module.exports = { UserAlreadyExistsError };
