@@ -1,8 +1,8 @@
 'use strict';
 const _ = require('lodash');
 
-const { Message } = require('./models');
 const NotAuthorizedError = require('./errors/not-authorized-error');
+const { Message } = require('./models');
 
 module.exports = {
     setup: app => {
