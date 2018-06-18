@@ -2,12 +2,12 @@ const _ = require('lodash');
 const request = require('supertest');
 
 const app = require('../../app');
-const { User, Friendship } = require('../../models');
 const sequelize = require('../../models/sequelize');
 const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
-const { ContentType, Header, Accept } = require('../helpers/enums');
 const expectations = require('../helpers/common-expectations');
+const { User, Friendship } = require('../../models');
+const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('Friendship controller', () => {
     let now;

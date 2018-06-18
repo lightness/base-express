@@ -2,10 +2,10 @@ const _ = require('lodash');
 const request = require('supertest');
 
 const app = require('../../app');
-const { User } = require('../../models');
 const sequelize = require('../../models/sequelize');
 const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
+const { User } = require('../../models');
 const { AuthHeaderRegexp } = require('../helpers/regexps');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
