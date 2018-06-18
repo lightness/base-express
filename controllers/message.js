@@ -39,7 +39,7 @@ router.post('/send', (req, res) => {
         .catch(errorHandler(res));
 });
 
-router.put('/markAsRead', (req, res) => {
+router.put('/mark-as-read', (req, res) => {
     const currentUserId = req.user.userId;
     const fromId = req.body.fromId;
     const toId = req.body.toId;
