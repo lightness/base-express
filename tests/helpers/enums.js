@@ -1,3 +1,4 @@
+'use strict';
 const ContentType = Object.freeze({
     HTML: /text\/html/,
     JSON: /application\/json/,

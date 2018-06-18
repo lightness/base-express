@@ -1,3 +1,4 @@
+'use strict';
 const errorFactory = require('error-factory');
 
 const AppError = require('./app-error');

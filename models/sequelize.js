@@ -1,5 +1,4 @@
 'use strict';
-
 const Sequelize = require('sequelize');
 
 const env = require('../config/env');

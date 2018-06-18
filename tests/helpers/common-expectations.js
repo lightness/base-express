@@ -1,3 +1,4 @@
+'use strict';
 function expectUsersAreEqual(target, source) {
     expect(target).toBeDefined(`Target user should be defined`);
     expect(source).toBeDefined(`Source user should be defined`);

@@ -1,11 +1,12 @@
+'use strict';
 const express = require('express');
 const { Op } = require('sequelize');
 
-const { Message, User } = require('../models');
 const longPoll = require('../long-poll');
 const errorHandler = require('../errors/default-handler');
 const MessageRangeError = require('../errors/mesasge/message-range-error');
 const WrongMessageTargetError = require('../errors/mesasge/wrong-message-target-error');
+const { Message, User } = require('../models');
 
 const router = express.Router();
 

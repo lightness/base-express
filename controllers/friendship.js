@@ -1,14 +1,15 @@
+'use strict';
 const express = require('express');
 const { Op } = require('sequelize');
 
-const { Friendship, User } = require('../models');
 const errorHandler = require('../errors/default-handler');
 const UserNotFoundError = require('../errors/user/user-not-found-error');
 const FriendshipNotFoundError = require('../errors/friendship/friendship-not-found-error');
+const WrongFriendshipTargetError = require('../errors/friendship/wrong-friendship-target-error');
 const FriendshipAlreadyExistsError = require('../errors/friendship/friendship-already-exists-error');
 const FriendshipAlreadyAcceptedError = require('../errors/friendship/friendship-already-accepted-error');
 const FriendshipAlreadyRejectedError = require('../errors/friendship/friendship-already-rejected-error');
-const WrongFriendshipTargetError = require('../errors/friendship/wrong-friendship-target-error');
+const { Friendship, User } = require('../models');
 
 const router = express.Router();
 

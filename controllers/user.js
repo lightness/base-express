@@ -1,16 +1,17 @@
+'use strict';
 const _ = require('lodash');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 const express = require('express');
 const { Op } = require('sequelize');
 
-const { User } = require('../models');
 const jwtHelper = require('../helpers/jwt');
 const errorHandler = require('../errors/default-handler');
 const ValidationError = require('../errors/validation-error');
 const UserNotForundError = require('../errors/user/user-not-found-error');
 const BadCredentialsError = require('../errors/user/bad-credentials-error');
 const UserAlreadyExistsError = require('../errors/user/user-already-exists-error');
+const { User } = require('../models');
 
 const router = express.Router();
 

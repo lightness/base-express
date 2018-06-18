@@ -1,3 +1,4 @@
+'use strict';
 const AppError = require('./app-error');
 
 module.exports = res => {

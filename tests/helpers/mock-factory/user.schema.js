@@ -1,3 +1,4 @@
+'use strict';
 const dream = require('dreamjs');
 
 dream.schema('user', {
