@@ -90,8 +90,9 @@ router.post('/request', (req, res) => {
                 status: Friendship.Status.REQUESTED,
             });
         })
-        .then(createdFriendshipInstance => {
-            res.json(createdFriendshipInstance);
+        .then(createdFriendship => Friendship.findById(createdFriendship.id))
+        .then(createdFriendship => {
+            res.json(createdFriendship);
         })
         .catch(errorHandler(res));
 });
@@ -112,7 +113,7 @@ router.put('/:friendshipId/accept', (req, res) => {
             switch (foundFriendshipInstance.status) {
                 case Friendship.Status.ACCEPTED:
                     throw new FriendshipAlreadyAcceptedError();
-                case Friendship.Status.REJECT:
+                case Friendship.Status.REJECTED:
                     throw new FriendshipAlreadyRejectedError();
             }
 
@@ -128,6 +129,7 @@ router.put('/:friendshipId/accept', (req, res) => {
 
 router.put('/:friendshipId/reject', (req, res) => {
     const friendshipId = req.params.friendshipId;
+    const currentUserId = req.user.userId;
 
     Friendship.findById(friendshipId)
         .then(foundFriendshipInstance => {
@@ -141,12 +143,12 @@ router.put('/:friendshipId/reject', (req, res) => {
             switch (foundFriendshipInstance.status) {
                 case Friendship.Status.ACCEPTED:
                     throw new FriendshipAlreadyAcceptedError();
-                case Friendship.Status.REJECT:
+                case Friendship.Status.REJECTED:
                     throw new FriendshipAlreadyRejectedError();
             }
 
             return foundFriendshipInstance.update({
-                status: Friendship.Status.REJECT,
+                status: Friendship.Status.REJECTED,
             });
         })
         .then(updatedFriendshipInstance => {
@@ -175,7 +177,8 @@ router.delete('/:friendshipId', (req, res) => {
             return foundFriendshipInstance.destroy();
         })
         .then(() => {
-            res.send(200);
+            console.log(">>> xxx");
+            res.status(200).json({});
         })
         .catch(errorHandler(res));
 });
