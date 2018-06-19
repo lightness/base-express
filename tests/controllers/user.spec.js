@@ -1,43 +1,22 @@
 'use strict';
 const _ = require('lodash');
 const request = require('supertest');
+const Promise = require('bluebird');
 
 const app = require('../../app');
-const sequelize = require('../../models/sequelize');
 const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
+const freezeDate = require('../helpers/date-holder');
+const setupDataRepopulation = require('../helpers/data-repopulator');
+const setupCurrentUserCreation = require('../helpers/current-user-holder');
 const { User } = require('../../models');
 const { AuthHeaderRegexp } = require('../helpers/regexps');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('User controller', () => {
-    let now;
-    let currentUser;
-    let authorizationHeader;
-
-    beforeEach(done => {
-        now = new Date();
-
-        jasmine.clock().install();
-        jasmine.clock().mockDate(now);
-
-        sequelize
-            .sync({ force: true })
-            .then(() =>
-                User.create(mockFactory.create('user', { omit: ['id'] })),
-            )
-            .then(createdUser => {
-                currentUser = createdUser.toJSON();
-                authorizationHeader = jwtHelper.createAuthHeader(
-                    createdUser.id,
-                );
-            })
-            .then(done);
-    });
-
-    afterEach(() => {
-        jasmine.clock().uninstall();
-    });
+    setupDataRepopulation();
+    let dateHolder = freezeDate();
+    let currentUserHolder = setupCurrentUserCreation();
 
     describe('GET /user/me', () => {
         const URL = '/user/me';
@@ -76,46 +55,54 @@ describe('User controller', () => {
             const EXPECTED_ERROR_MESSAGE = 'User not found';
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(createdUser => {
-                const authHeader = jwtHelper.createAuthHeader(
-                    createdUser.id + 1,
-                );
+            User.create(userToCreate)
+                .then(createdUser => {
+                    const authHeader = jwtHelper.createAuthHeader(createdUser.id + 1);
 
-                request(app)
-                    .get(URL)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
-                    })
-                    .expect(404, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, authHeader)
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                            })
+                            .expect(404, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
         it('should respond with 200, if authorization token is correct', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(createdUser => {
-                const authHeader = jwtHelper.createAuthHeader(createdUser.id);
+            User.create(userToCreate)
+                .then(createdUser => {
+                    const authHeader = jwtHelper.createAuthHeader(createdUser.id);
 
-                request(app)
-                    .get(URL)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body.id).toBe(createdUser.id);
-                        expect(res.body.email).toBe(createdUser.email);
-                        expect(res.body.fullName).toBe(createdUser.fullName);
-                        expect(res.body.password).toBeUndefined();
-                        expect(new Date(res.body.createdAt)).toEqual(now);
-                        expect(new Date(res.body.updatedAt)).toEqual(now);
-                    })
-                    .expect(200, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, authHeader)
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body.id).toBe(createdUser.id);
+                                expect(res.body.email).toBe(createdUser.email);
+                                expect(res.body.fullName).toBe(createdUser.fullName);
+                                expect(res.body.password).toBeUndefined();
+                                expect(new Date(res.body.createdAt)).toEqual(dateHolder.getNow());
+                                expect(new Date(res.body.updatedAt)).toEqual(dateHolder.getNow());
+                            })
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
     });
 
@@ -142,7 +129,7 @@ describe('User controller', () => {
             request(app)
                 .get(URL)
                 .set(Header.ACCEPT, Accept.JSON)
-                .set(Header.AUTHORIZATION, authorizationHeader)
+                .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(res => {
                     expect(res.body).toBeDefined();
@@ -154,25 +141,30 @@ describe('User controller', () => {
         it('should respond with 200, if user found', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(createdUser => {
-                const URL = '/user/' + createdUser.id;
+            User.create(userToCreate)
+                .then(createdUser => {
+                    const URL = '/user/' + createdUser.id;
 
-                request(app)
-                    .get(URL)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body.id).toBe(createdUser.id);
-                        expect(res.body.email).toBe(createdUser.email);
-                        expect(res.body.fullName).toBe(createdUser.fullName);
-                        expect(res.body.password).toBeUndefined();
-                        expect(new Date(res.body.createdAt)).toEqual(now);
-                        expect(new Date(res.body.updatedAt)).toEqual(now);
-                    })
-                    .expect(200, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body.id).toBe(createdUser.id);
+                                expect(res.body.email).toBe(createdUser.email);
+                                expect(res.body.fullName).toBe(createdUser.fullName);
+                                expect(res.body.password).toBeUndefined();
+                                expect(new Date(res.body.createdAt)).toEqual(dateHolder.getNow());
+                                expect(new Date(res.body.updatedAt)).toEqual(dateHolder.getNow());
+                            })
+                            .expect(200, done);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
     });
 
@@ -182,24 +174,27 @@ describe('User controller', () => {
         it('should respond with 200 and contain authorization header, if login was successful', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(createdUser => {
-                const email = createdUser.email;
-                const password = 'any password';
+            User.create(userToCreate)
+                .then(createdUser => {
+                    const email = createdUser.email;
+                    const password = 'any password';
 
-                spyOn(require('bcryptjs'), 'compare').and.callFake(() =>
-                    Promise.resolve(true),
-                );
+                    spyOn(require('bcryptjs'), 'compare').and.callFake(() => Promise.resolve(true));
 
-                request(app)
-                    .post(URL)
-                    .send({
-                        email: email,
-                        password: password,
-                    })
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .expect(Header.AUTHORIZATION, AuthHeaderRegexp)
-                    .expect(200, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send({
+                                email: email,
+                                password: password,
+                            })
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .expect(Header.AUTHORIZATION, AuthHeaderRegexp)
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
         it('should respond with 401, if wrong email was passed', done => {
@@ -224,28 +219,31 @@ describe('User controller', () => {
         it('should respond with 401, if wrong password was passed', done => {
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(createdUser => {
-                const email = createdUser.email;
-                const password = 'any password';
+            User.create(userToCreate)
+                .then(createdUser => {
+                    const email = createdUser.email;
+                    const password = 'any password';
 
-                spyOn(require('bcryptjs'), 'compare').and.callFake(() =>
-                    Promise.resolve(false),
-                );
+                    spyOn(require('bcryptjs'), 'compare').and.callFake(() => Promise.resolve(false));
 
-                request(app)
-                    .post(URL)
-                    .send({
-                        email: email,
-                        password: password,
-                    })
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.headers).toBeDefined();
-                        expect(res.headers.authorization).not.toBeDefined();
-                    })
-                    .expect(401, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send({
+                                email: email,
+                                password: password,
+                            })
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.headers).toBeDefined();
+                                expect(res.headers.authorization).not.toBeDefined();
+                            })
+                            .expect(401, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
     });
 
@@ -253,22 +251,26 @@ describe('User controller', () => {
         const URL = '/user/register';
 
         it('should respond with 400, if user with such email already exists', done => {
-            const EXPECTED_ERROR_MESSAGE =
-                'User with such email already exists';
+            const EXPECTED_ERROR_MESSAGE = 'User with such email already exists';
             const userToCreate = mockFactory.create('user', { omit: ['id'] });
 
-            User.create(userToCreate).then(() => {
-                request(app)
-                    .post(URL)
-                    .send(userToCreate)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
-                    })
-                    .expect(400, done);
-            });
+            User.create(userToCreate)
+                .then(() => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send(userToCreate)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                            })
+                            .expect(400, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
         it('should respond with 400, if no email specified', done => {
@@ -347,8 +349,7 @@ describe('User controller', () => {
         });
 
         it('should respond with 400, if password is too short', done => {
-            const EXPECTED_ERROR_MESSAGE =
-                '"password" length must be at least 8 characters long';
+            const EXPECTED_ERROR_MESSAGE = '"password" length must be at least 8 characters long';
             const userToRegister = mockFactory.create('user', {
                 omit: ['id'],
                 defaults: {
@@ -382,31 +383,36 @@ describe('User controller', () => {
                     expect(res.body.fullName).toBe(userToRegister.fullName);
                     expect(res.body.email).toBe(userToRegister.email);
                     expect(res.body.password).not.toBeDefined();
-                    expect(new Date(res.body.createdAt)).toEqual(now);
-                    expect(new Date(res.body.updatedAt)).toEqual(now);
+                    expect(new Date(res.body.createdAt)).toEqual(dateHolder.getNow());
+                    expect(new Date(res.body.updatedAt)).toEqual(dateHolder.getNow());
                 })
                 .expect(200, done);
         });
 
         it('should persist user, if no user with such email', done => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
-            let createdUserId;
 
-            request(app)
-                .post(URL)
-                .send(userToRegister)
-                .set(Header.ACCEPT, Accept.JSON)
-                .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                .expect(res => {
-                    createdUserId = res.body.id;
+            new Promise(resolve => {
+                let createdUserId;
+
+                request(app)
+                    .post(URL)
+                    .send(userToRegister)
+                    .set(Header.ACCEPT, Accept.JSON)
+                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                    .expect(res => {
+                        createdUserId = res.body.id;
+                    })
+                    .end(() => {
+                        resolve(createdUserId);
+                    });
+            })
+                .then(createdUserId => User.findById(createdUserId))
+                .then(foundUser => {
+                    expect(foundUser).toBeDefined();
                 })
-                .end(() => {
-                    User.findById(createdUserId)
-                        .then(foundUser => {
-                            expect(foundUser).toBeDefined();
-                        })
-                        .finally(done);
-                });
+                .catch(fail)
+                .finally(done);
         });
     });
 
@@ -419,96 +425,112 @@ describe('User controller', () => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfEmail = userToRegister.email.slice(1, -1);
 
-            User.create(userToRegister).then(() => {
-                request(app)
-                    .get(URL + '?q=' + encodeURIComponent(partOfEmail))
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
-                    })
-                    .expect(401, done);
-            });
+            User.create(userToRegister)
+                .then(() => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL + '?q=' + encodeURIComponent(partOfEmail))
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body.message).toBe(EXPECTED_ERROR_MESSAGE);
+                            })
+                            .expect(401, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
-        it('should response with 200 and return list of users, if email contains query token', done => {
+        it('should respond with 200 and return list of users, if email contains query token', done => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfEmail = userToRegister.email.slice(1, -1);
 
-            User.create(userToRegister).then(createdUser => {
-                request(app)
-                    .get(URL + '?q=' + encodeURIComponent(partOfEmail))
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body).toEqual(jasmine.any(Array));
-                        expect(res.body.length).toBe(1);
-                        expect(res.body[0]).toBeDefined();
-                        expect(res.body[0].id).toBe(createdUser.id);
-                        expect(res.body[0].email).toBe(userToRegister.email);
-                        expect(res.body[0].fullName).toBe(
-                            userToRegister.fullName,
-                        );
-                        expect(res.body[0].password).not.toBeDefined();
-                    })
-                    .expect(200, done);
-            });
+            User.create(userToRegister)
+                .then(createdUser => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL + '?q=' + encodeURIComponent(partOfEmail))
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body).toEqual(jasmine.any(Array));
+                                expect(res.body.length).toBe(1);
+                                expect(res.body[0]).toBeDefined();
+                                expect(res.body[0].id).toBe(createdUser.id);
+                                expect(res.body[0].email).toBe(userToRegister.email);
+                                expect(res.body[0].fullName).toBe(userToRegister.fullName);
+                                expect(res.body[0].password).not.toBeDefined();
+                            })
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
-        it('should response with 200 and return list of users, if full name contains query token', done => {
+        it('should respond with 200 and return list of users, if full name contains query token', done => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfFullName = userToRegister.fullName.slice(1, -1);
 
-            User.create(userToRegister).then(createdUser => {
-                request(app)
-                    .get(URL + '?q=' + encodeURIComponent(partOfFullName))
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body).toEqual(jasmine.any(Array));
-                        expect(res.body.length).toBe(1);
-                        expect(res.body[0]).toBeDefined();
-                        expect(res.body[0].id).toBe(createdUser.id);
-                        expect(res.body[0].email).toBe(userToRegister.email);
-                        expect(res.body[0].fullName).toBe(
-                            userToRegister.fullName,
-                        );
-                        expect(res.body[0].password).not.toBeDefined();
-                    })
-                    .expect(200, done);
-            });
+            User.create(userToRegister)
+                .then(createdUser => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL + '?q=' + encodeURIComponent(partOfFullName))
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body).toEqual(jasmine.any(Array));
+                                expect(res.body.length).toBe(1);
+                                expect(res.body[0]).toBeDefined();
+                                expect(res.body[0].id).toBe(createdUser.id);
+                                expect(res.body[0].email).toBe(userToRegister.email);
+                                expect(res.body[0].fullName).toBe(userToRegister.fullName);
+                                expect(res.body[0].password).not.toBeDefined();
+                            })
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
-        it('should response with 200 and return empty list, if no matches', done => {
+        it('should respond with 200 and return empty list, if no matches', done => {
             const userToRegister = mockFactory.create('user', { omit: ['id'] });
             const partOfFullName = userToRegister.fullName.slice(1, -1);
             const query = partOfFullName + partOfFullName;
 
-            User.create(userToRegister).then(() => {
-                request(app)
-                    .get(URL + '?q=' + encodeURIComponent(query))
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expect(res.body).toBeDefined();
-                        expect(res.body).toEqual(jasmine.any(Array));
-                        expect(res.body.length).toBe(0);
-                    })
-                    .expect(200, done);
-            });
+            User.create(userToRegister)
+                .then(() => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .get(URL + '?q=' + encodeURIComponent(query))
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expect(res.body).toBeDefined();
+                                expect(res.body).toEqual(jasmine.any(Array));
+                                expect(res.body.length).toBe(0);
+                            })
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
-        it('should response with 200 and do not return current user, if matches query', done => {
+        it('should respond with 200 and do not return current user, if matches query', done => {
             request(app)
-                .get(URL + '?q=' + encodeURIComponent(currentUser.email))
+                .get(URL + '?q=' + encodeURIComponent(currentUserHolder.getCurrentUser().email))
                 .set(Header.ACCEPT, Accept.JSON)
-                .set(Header.AUTHORIZATION, authorizationHeader)
+                .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(res => {
                     expect(res.body).toBeDefined();

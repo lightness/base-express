@@ -5,37 +5,16 @@ const Promise = require('bluebird');
 const { Op } = require('sequelize');
 
 const app = require('../../app');
-const sequelize = require('../../models/sequelize');
-const jwtHelper = require('../../helpers/jwt');
 const mockFactory = require('../helpers/mock-factory');
 const expectations = require('../helpers/common-expectations');
+const setupDataRepopulation = require('../helpers/data-repopulator');
+const setupCurrentUserCreation = require('../helpers/current-user-holder');
 const { User, Message } = require('../../models');
 const { ContentType, Header, Accept } = require('../helpers/enums');
 
 describe('Message controller', () => {
-    let now;
-    let currentUser;
-    let authorizationHeader;
-
-    beforeEach(done => {
-        now = new Date();
-
-        jasmine.clock().install();
-        jasmine.clock().mockDate(now);
-
-        sequelize
-            .sync({ force: true })
-            .then(() => User.create(mockFactory.create('user', { omit: ['id'] })))
-            .then(createdUser => {
-                currentUser = createdUser.toJSON();
-                authorizationHeader = jwtHelper.createAuthHeader(createdUser.id);
-            })
-            .then(done);
-    });
-
-    afterEach(() => {
-        jasmine.clock().uninstall();
-    });
+    setupDataRepopulation();
+    let currentUserHolder = setupCurrentUserCreation();
 
     describe('POST /message/send', () => {
         const URL = '/message/send';
@@ -60,6 +39,7 @@ describe('Message controller', () => {
         });
 
         it('should respond with 400, if user tries to send message itself', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const EXPECTED_ERROR_MESSAGE = 'You can not send a message to yourself';
             const message = mockFactory.create('message', {
                 omit: ['id', 'isRead', 'fromUserId'],
@@ -72,7 +52,7 @@ describe('Message controller', () => {
                 .post(URL)
                 .send(message)
                 .set(Header.ACCEPT, Accept.JSON)
-                .set(Header.AUTHORIZATION, authorizationHeader)
+                .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(res => {
                     expect(res.body).toBeDefined();
@@ -89,7 +69,7 @@ describe('Message controller', () => {
                 .post(URL)
                 .send({ toUserId: WRONG_TARGET_USER_ID })
                 .set(Header.ACCEPT, Accept.JSON)
-                .set(Header.AUTHORIZATION, authorizationHeader)
+                .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                 .expect(Header.CONTENT_TYPE, ContentType.JSON)
                 .expect(res => {
                     expect(res.body).toBeDefined();
@@ -103,67 +83,80 @@ describe('Message controller', () => {
                 omit: ['id'],
             });
 
-            User.create(targetUser).then(createdTargetUser => {
-                const message = mockFactory.create('message', {
-                    omit: ['id', 'isRead', 'fromUserId'],
-                    defaults: {
-                        toUserId: createdTargetUser.id,
-                    },
-                });
+            User.create(targetUser)
+                .then(createdTargetUser => {
+                    const message = mockFactory.create('message', {
+                        omit: ['id', 'isRead', 'fromUserId'],
+                        defaults: {
+                            toUserId: createdTargetUser.id,
+                        },
+                    });
 
-                request(app)
-                    .post(URL)
-                    .send(message)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        expectations.expectMessagesAreEqual(res.body, {
-                            ...message,
-                            isRead: false,
-                            fromUserId: currentUser.id,
-                        });
-                    })
-                    .expect(200, done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send(message)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                expectations.expectMessagesAreEqual(res.body, {
+                                    ...message,
+                                    isRead: false,
+                                    fromUserId: currentUser.id,
+                                });
+                            })
+                            .expect(200, resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
         it('should persist message, if all conditions passed', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const targetUser = mockFactory.create('user', {
                 omit: ['id'],
             });
 
-            User.create(targetUser).then(createdTargetUser => {
-                const message = mockFactory.create('message', {
-                    omit: ['id', 'isRead', 'fromUserId'],
-                    defaults: {
-                        toUserId: createdTargetUser.id,
-                    },
-                });
-
-                let createdMessageId;
-
-                request(app)
-                    .post(URL)
-                    .send(message)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(res => {
-                        createdMessageId = res.body.id;
-                    })
-                    .end(() => {
-                        Message.findById(createdMessageId)
-                            .then(foundMessage => {
-                                expectations.expectMessagesAreEqual(foundMessage, {
-                                    ...message,
-                                    fromUserId: currentUser.id,
-                                    isRead: false,
-                                });
-                            })
-                            .finally(done);
+            User.create(targetUser)
+                .then(createdTargetUser => {
+                    const message = mockFactory.create('message', {
+                        omit: ['id', 'isRead', 'fromUserId'],
+                        defaults: {
+                            toUserId: createdTargetUser.id,
+                        },
                     });
-            });
+
+                    let createdMessage;
+
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send(message)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(res => {
+                                createdMessage = res.body;
+                            })
+                            .end(() => {
+                                resolve([message, createdMessage]);
+                            });
+                    });
+                })
+                .spread((originalMessage, createdMessage) =>
+                    Promise.all([originalMessage, Message.findById(createdMessage.id)]),
+                )
+                .spread((originalMessage, foundMessage) => {
+                    expectations.expectMessagesAreEqual(foundMessage, {
+                        ...originalMessage,
+                        fromUserId: currentUser.id,
+                        isRead: false,
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
 
         it('should publish message through long polling, if all conditions passed', done => {
@@ -171,35 +164,40 @@ describe('Message controller', () => {
                 omit: ['id'],
             });
 
-            User.create(targetUser).then(createdTargetUser => {
-                const message = mockFactory.create('message', {
-                    omit: ['id', 'isRead', 'fromUserId'],
-                    defaults: {
-                        toUserId: createdTargetUser.id,
-                    },
-                });
+            User.create(targetUser)
+                .then(createdTargetUser => {
+                    const message = mockFactory.create('message', {
+                        omit: ['id', 'isRead', 'fromUserId'],
+                        defaults: {
+                            toUserId: createdTargetUser.id,
+                        },
+                    });
 
-                request(app)
-                    .post(URL)
-                    .send(message)
-                    .set(Header.ACCEPT, Accept.JSON)
-                    .set(Header.AUTHORIZATION, authorizationHeader)
-                    .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                    .expect(() => {
-                        expect(publishSpy).toHaveBeenCalledTimes(1);
-                        expect(publishSpy).toHaveBeenCalledWith(
-                            createdTargetUser.id,
-                            jasmine.objectContaining({
-                                id: jasmine.any(Number),
-                                fromUserId: currentUser.id,
-                                toUserId: createdTargetUser.id,
-                                text: message.text,
-                                isRead: false,
-                            }),
-                        );
-                    })
-                    .end(done);
-            });
+                    return new Promise(resolve => {
+                        request(app)
+                            .post(URL)
+                            .send(message)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .expect(() => {
+                                expect(publishSpy).toHaveBeenCalledTimes(1);
+                                expect(publishSpy).toHaveBeenCalledWith(
+                                    createdTargetUser.id,
+                                    jasmine.objectContaining({
+                                        id: jasmine.any(Number),
+                                        fromUserId: currentUser.id,
+                                        toUserId: createdTargetUser.id,
+                                        text: message.text,
+                                        isRead: false,
+                                    }),
+                                );
+                            })
+                            .end(resolve);
+                    });
+                })
+                .catch(fail)
+                .finally(done);
         });
     });
 
@@ -221,6 +219,7 @@ describe('Message controller', () => {
         });
 
         it('should respond with 400, if either "fromId" or "toId" are not specified', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const EXPECTED_ERROR_MESSAGE = 'Fields "fromId" and "toId" should be specified';
             const targetUser = mockFactory.create('user', {
                 omit: ['id'],
@@ -250,7 +249,7 @@ describe('Message controller', () => {
                             .put(URL)
                             .send(range)
                             .set(Header.ACCEPT, Accept.JSON)
-                            .set(Header.AUTHORIZATION, authorizationHeader)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                             .expect(Header.CONTENT_TYPE, ContentType.JSON)
                             .expect(res => {
                                 expect(res.body).toBeDefined();
@@ -264,6 +263,7 @@ describe('Message controller', () => {
         });
 
         it('should respond with 400, if "fromId" greater than "toId"', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const EXPECTED_ERROR_MESSAGE = 'Value of "fromId" should be less than value of "toId"';
             const targetUser = mockFactory.create('user', {
                 omit: ['id'],
@@ -299,7 +299,7 @@ describe('Message controller', () => {
                             .put(URL)
                             .send(range)
                             .set(Header.ACCEPT, Accept.JSON)
-                            .set(Header.AUTHORIZATION, authorizationHeader)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                             .expect(Header.CONTENT_TYPE, ContentType.JSON)
                             .expect(res => {
                                 expect(res.body).toBeDefined();
@@ -313,6 +313,7 @@ describe('Message controller', () => {
         });
 
         it('should respond with 204, if all conditions passed', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const targetUser = mockFactory.create('user', {
                 omit: ['id'],
             });
@@ -347,7 +348,7 @@ describe('Message controller', () => {
                             .put(URL)
                             .send(range)
                             .set(Header.ACCEPT, Accept.JSON)
-                            .set(Header.AUTHORIZATION, authorizationHeader)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
                             .expect(Header.CONTENT_TYPE, ContentType.JSON)
                             .expect(204, resolve);
                     });
@@ -357,6 +358,7 @@ describe('Message controller', () => {
         });
 
         it('should update "isRead" field for messages with id between "fromId" and "toId", if message addressed to current user', done => {
+            const currentUser = currentUserHolder.getCurrentUser();
             const createUser = () => mockFactory.create('user', { omit: ['id'] });
             const users = _.times(2, () => createUser());
 
@@ -388,18 +390,17 @@ describe('Message controller', () => {
                         .map(message => message.id)
                         .max(),
                 }))
-                .tap(
-                    range =>
-                        new Promise(resolve => {
-                            request(app)
-                                .put(URL)
-                                .send(range)
-                                .set(Header.ACCEPT, Accept.JSON)
-                                .set(Header.AUTHORIZATION, authorizationHeader)
-                                .expect(Header.CONTENT_TYPE, ContentType.JSON)
-                                .end(resolve);
-                        }),
-                )
+                .tap(range => {
+                    return new Promise(resolve => {
+                        request(app)
+                            .put(URL)
+                            .send(range)
+                            .set(Header.ACCEPT, Accept.JSON)
+                            .set(Header.AUTHORIZATION, currentUserHolder.getAuthorizationHeader())
+                            .expect(Header.CONTENT_TYPE, ContentType.JSON)
+                            .end(resolve);
+                    });
+                })
                 .then(range => Message.findAll({ where: { id: { [Op.between]: [range.fromId, range.toId] } } }))
                 .then(foundMessages => {
                     _.each(foundMessages, message => {
