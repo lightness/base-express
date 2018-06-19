@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/lightness/base-express.svg?branch=master)](https://travis-ci.com/lightness/base-express)
+
 # How to run/test me
 
 ## Pre-requirements
