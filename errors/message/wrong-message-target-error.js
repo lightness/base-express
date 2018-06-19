@@ -12,4 +12,4 @@ const WrongMessageTargetError = errorFactory(
     AppError,
 );
 
-module.exports = WrongMessageTargetError;
+module.exports = { WrongMessageTargetError };

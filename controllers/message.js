@@ -32,7 +32,7 @@ router.post('/send', (req, res) => {
             });
         })
         .then(createdMessage => {
-            longPoll.publish(createdMessage.toUserId, createdMessage);
+            longPoll.publish(createdMessage.toUserId, createdMessage.toJSON());
 
             res.json(createdMessage);
         })

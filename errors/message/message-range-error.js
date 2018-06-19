@@ -12,4 +12,4 @@ const MessageRangeError = errorFactory(
     AppError,
 );
 
-module.exports = MessageRangeError;
+module.exports = { MessageRangeError };

@@ -1,40 +1,44 @@
 'use strict';
 const _ = require('lodash');
 
-const NotAuthorizedError = require('./errors/not-authorized-error');
+const Longpoll = require('express-longpoll');
 const { Message } = require('./models');
+const { NotAuthorizedError } = require('./errors');
 
-module.exports = {
-    setup: app => {
-        this.longpoll = require('express-longpoll')(app);
+let longpoll;
 
-        this.longpoll.create('/poll/:id', (req, res, next) => {
-            const userId = +req.params.id;
-            const currentUserId = req.user.userId;
+function setup(app) {
+    longpoll = Longpoll(app);
 
-            if (userId !== currentUserId) {
-                throw new NotAuthorizedError();
+    longpoll.create('/poll/:id', (req, res, next) => {
+        const userId = +req.params.id;
+        const currentUserId = req.user.userId;
+
+        if (userId !== currentUserId) {
+            throw new NotAuthorizedError();
+        }
+
+        req.id = currentUserId;
+
+        Message.findAll({
+            where: {
+                toUserId: currentUserId,
+                isRead: false,
+            },
+            order: [['id', 'ASC']],
+            limit: 100,
+        }).then(foundMessageInstances => {
+            if (_.isEmpty(foundMessageInstances)) {
+                return next();
             }
 
-            req.id = currentUserId;
-
-            Message.findAll({
-                where: {
-                    toUserId: currentUserId,
-                    isRead: false,
-                },
-                order: [['id', 'ASC']],
-                limit: 100,
-            }).then(foundMessageInstances => {
-                if (_.isEmpty(foundMessageInstances)) {
-                    return next();
-                }
-
-                res.json(foundMessageInstances);
-            });
+            res.json(foundMessageInstances);
         });
-    },
-    publish: (userId, message) => {
-        this.longpoll.publishToId('/poll/:id', userId, [message.toJSON()]);
-    },
-};
+    });
+}
+
+function publish(userId, message) {
+    longpoll.publishToId('/poll/:id', userId, [message.toJSON()]);
+}
+
+module.exports = { setup, publish };

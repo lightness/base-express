@@ -18,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.0.1",
+    "bluebird": "^3.5.1",
     "body-parser": "^1.12.3",
     "cross-env": "^5.1.6",
     "error-factory": "^0.1.6",
